@@ -53,7 +53,7 @@ with this fork's UFS boot chain on 2026-11-08.
 | A/B firmware slots | Yes | Upgrade to the inactive slot, revert of an unvalidated slot on reboot and on a power cycle, persistence once validated, `Nerves.Runtime.revert/0`; only env p1 changes and both GPTs stay intact |
 | OTA updates (`mix upload`) | Yes | `fwup` over SSH; delta updates supported (fwup >= 1.12 on device) |
 | Ethernet | Yes | Gigabit (1000/full measured), gmac0 + RTL8211F; DHCP |
-| WiFi (onboard) | Partial | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Re-enumerates from `a69c:8d80` to `8d81` after firmware upload and `aic8800_fdrv` loads; `wlan0` scans 2.4 and 5 GHz. Station connect not yet tested |
+| WiFi (onboard) | Yes | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Re-enumerates from `a69c:8d80` to `8d81` after firmware upload and `aic8800_fdrv` loads; `wlan0` scans 2.4 and 5 GHz. Station mode verified: WPA2, DHCP, ~130 Mbit/s download |
 | Bluetooth | Partial | `hci0` registers (aic_btusb, BlueZ mode); no BT userspace is included |
 | HDMI display + console | Yes | Hotplug and EDID work; a 4K TV comes up at 3840x2160p60. The framebuffer console is on by default and a KMS app takes the display over |
 | GPU (Mali G52 MC3) | Yes | Vendor kmod + libmali g29p1 (OpenGL ES 3.2, EGL 1.5, GBM; matched to the kbase DDK). The included `kmscube` smoke test renders on HDMI at the 60 Hz vsync. No UI toolkit in the system |
