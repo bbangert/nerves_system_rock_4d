@@ -158,7 +158,9 @@ if the next boot still sees it unvalidated, U-Boot boots the other slot.
 The env is a single copy, so a torn `saveenv` yields the default
 environment and an extlinux boot without revert on that boot. If the
 nerves boot path or the environment is broken, `bootflow scan` boots
-`extlinux/extlinux.conf` from the FAT partition instead. U-Boot build
+`extlinux/extlinux.conf` from the FAT partition instead; that scan only
+finds it because bootfs is the only partition marked bootable (GPT
+legacy-BIOS-bootable attribute). U-Boot build
 details and provenance: `uboot/README.md`.
 
 Linux never mounts the bootfs: it is a 512-byte-BPB FAT (all fwup can

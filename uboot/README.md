@@ -65,8 +65,10 @@ If `nerves_boot` ever fails, `bootcmd` falls through to `bootflow scan -lb`,
 which boots `extlinux/extlinux.conf` from the bootfs. A missing or corrupt
 environment block makes U-Boot fall back to its compiled-in default
 environment, which does the same, so a bad environment cannot brick the
-device. The env is a single copy (`env/scsi.c` has no redundant mode): a
-torn `saveenv` costs the revert on that one boot.
+device. Both fallbacks depend on bootfs being the only partition marked
+bootable: `bootflow scan` skips unbootable partitions (only p1, the raw
+env, if none is marked). The env is a single copy (`env/scsi.c` has no
+redundant mode): a torn `saveenv` costs the revert on that one boot.
 
 ## uboot.env: the shared firmware/boot environment
 

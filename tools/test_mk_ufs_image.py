@@ -32,6 +32,9 @@ LAYOUT = [
 ]
 LINUX_TYPE = uuid.UUID("0FC63DAF-8483-4772-8E79-3D69D8477DE4").bytes_le
 ESP_TYPE = uuid.UUID("C12A7328-F81F-11D2-BA4B-00A0C93EC93B").bytes_le
+# bootfs as fwup.conf marks it; rootfs-b sets every byte so a carry of only
+# the low bits would show.
+ATTRS = {"bootfs": 0x4, "rootfs-b": 0x8877665544332211}
 
 
 def crc(b):
@@ -63,7 +66,7 @@ def make_source(path, layout=LAYOUT, order=None):
         e = entries[slot * 128 : (slot + 1) * 128]
         e[0:16] = types[slot % 5]
         e[16:32] = guid(slot + 1)
-        struct.pack_into("<QQQ", e, 32, start, start + count - 1, 0)
+        struct.pack_into("<QQQ", e, 32, start, start + count - 1, ATTRS.get(name, 0))
         e[56:56 + 2 * len(name)] = name.encode("utf-16le")
         entries[slot * 128 : (slot + 1) * 128] = e
     entries = bytes(entries)
@@ -109,7 +112,7 @@ def read_gpt(buf_header, buf_entries):
             continue
         f, l = struct.unpack_from("<QQ", e, 32)
         name = e[56:].decode("utf-16le").rstrip("\0")
-        parts[name] = dict(type=e[0:16], uniq=e[16:32], first=f, last=l, slot=i)
+        parts[name] = dict(type=e[0:16], uniq=e[16:32], first=f, last=l, slot=i, attrs=e[48:56])
     return dict(cur=cur, alt=alt, first=first, last=last, disk_guid=buf_header[56:72],
                 ent_lba=ent_lba, parts=parts)
 
@@ -181,6 +184,11 @@ class ToolOutput(unittest.TestCase):
         self.assertEqual(p["rootfs-a"]["type"], LINUX_TYPE)
         for name, start, count in LAYOUT[:-1]:
             self.assertEqual((p[name]["last"] + 1) * SS, (start + count) * 512, name)
+
+    def test_attributes_preserved(self):
+        p = self.front_gpt()["parts"]
+        for name, _, _ in LAYOUT:
+            self.assertEqual(p[name]["attrs"], struct.pack("<Q", ATTRS.get(name, 0)), name)
 
     def test_data_grown_to_last_usable(self):
         g = self.front_gpt()
@@ -319,6 +327,36 @@ class OutputAliasesInput(unittest.TestCase):
     def test_full_mode_target(self):
         os.link(self.src, os.path.join(self.dir, "hf-full.img"))
         self.assert_refused(os.path.join(self.dir, "hf"), "--full")
+
+
+class OutputsAliasEachOther(unittest.TestCase):
+    """Writing the backup through an alias of the image would truncate the
+    image to 20480 bytes and still exit 0."""
+
+    def setUp(self):
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        self.dir = td.name
+        self.src = os.path.join(td.name, "fwup.img")
+        make_source(self.src)
+        self.out = os.path.join(td.name, "o")
+        with open(self.out + ".img", "wb") as f:
+            f.write(b"existing")
+
+    def assert_refused(self):
+        r = run_tool("--input", self.src, "--disk-bytes", str(DISK), "--out", self.out)
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.assertIn("are the same file", r.stderr)
+        with open(self.out + ".img", "rb") as f:
+            self.assertEqual(f.read(), b"existing")
+
+    def test_backup_symlinked_to_image(self):
+        os.symlink(self.out + ".img", self.out + "-backup-gpt.bin")
+        self.assert_refused()
+
+    def test_backup_hard_linked_to_image(self):
+        os.link(self.out + ".img", self.out + "-backup-gpt.bin")
+        self.assert_refused()
 
 
 if __name__ == "__main__":

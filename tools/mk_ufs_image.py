@@ -333,11 +333,11 @@ def self_verify(built: dict, disk_guid: bytes, translated: list, S: int) -> None
         raise GptError("self-check: round-trip BackupLBA mismatch")
 
     got = {
-        (p["slot"], p["name"], p["first_lba"], p["last_lba"], p["uniq_guid"], p["type_guid"])
+        (p["slot"], p["name"], p["first_lba"], p["last_lba"], p["uniq_guid"], p["type_guid"], p["attrs"])
         for p in rt["partitions"]
     }
     want = {
-        (p["slot"], p["name"], p["new_first"], p["new_last"], p["uniq_guid"], p["type_guid"])
+        (p["slot"], p["name"], p["new_first"], p["new_last"], p["uniq_guid"], p["type_guid"], p["attrs"])
         for p in translated
     }
     if got != want:
@@ -465,15 +465,27 @@ def main() -> int:
         print(f"error: {e}", file=sys.stderr)
         return 1
 
-    # "wb" truncates before the source is read; realpath covers symlinks,
-    # samefile covers hard links (only checkable once the output exists).
-    in_real = os.path.realpath(args.input)
-    for out in (f"{args.out}.img", f"{args.out}-backup-gpt.bin", f"{args.out}-full.img"):
-        if os.path.realpath(out) == in_real or (
-            os.path.exists(out) and os.path.samefile(out, args.input)
-        ):
+    # "wb" truncates, so an output aliasing the input or another output
+    # destroys it and still reports success; realpath covers symlinks,
+    # samefile covers hard links (only checkable once both exist).
+    def same(a, b):
+        return os.path.realpath(a) == os.path.realpath(b) or (
+            os.path.exists(a) and os.path.exists(b) and os.path.samefile(a, b)
+        )
+
+    outputs = (
+        [f"{args.out}-full.img"]
+        if args.full
+        else [f"{args.out}.img", f"{args.out}-backup-gpt.bin"]
+    )
+    for i, out in enumerate(outputs):
+        if same(out, args.input):
             print(f"error: output {out} is the same file as --input", file=sys.stderr)
             return 1
+        for other in outputs[i + 1 :]:
+            if same(out, other):
+                print(f"error: outputs {out} and {other} are the same file", file=sys.stderr)
+                return 1
 
     blank = (stale_start, stale_end)
     out_path = f"{args.out}-full.img" if args.full else f"{args.out}.img"

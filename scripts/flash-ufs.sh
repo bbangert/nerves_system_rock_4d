@@ -114,6 +114,9 @@ if [ "$yes" != 1 ]; then
   [ "$reply" = y ] || die "aborted"
 fi
 
+# Again: an automounter or swapon can claim the disk while the image builds
+# or the prompt waits.
+refuse_if_in_use "$dev"
 dd if="$tmp/ufs.img" of="$dev" bs=4M conv=fsync status=progress
 dd if="$tmp/ufs-backup-gpt.bin" of="$dev" bs=4096 seek="$backup_offset" \
   oflag=seek_bytes conv=fsync status=none
