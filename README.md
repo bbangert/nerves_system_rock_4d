@@ -55,8 +55,8 @@ with this fork's UFS boot chain on 2026-11-08.
 | Ethernet | Yes | Gigabit (1000/full measured), gmac0 + RTL8211F; DHCP |
 | WiFi (onboard) | Partial | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Re-enumerates from `a69c:8d80` to `8d81` after firmware upload and `aic8800_fdrv` loads; `wlan0` scans 2.4 and 5 GHz. Station connect not yet tested |
 | Bluetooth | Partial | `hci0` registers (aic_btusb, BlueZ mode); no BT userspace is included |
-| HDMI display + console | Untested | Framebuffer console enabled by default; a KMS app takes the display over. Worked on v0.1.x |
-| GPU (Mali G52 MC3) | Partial | Vendor kmod loads and libmali g29p1 (EGL/GLES/GBM, matched to the kbase DDK) is installed. `kmscube` is included as a smoke test but needs a display and has not been run on this release. No UI toolkit in the system |
+| HDMI display + console | Partial | Hotplug works and `/dev/fb0` comes up at 1920x1080p60; the framebuffer console is on by default and a KMS app takes the display over. The EDID read fails on the tested 4K TV (DDC reads corrupt partway), so only the fallback modes up to 1080p are offered |
+| GPU (Mali G52 MC3) | Yes | Vendor kmod + libmali g29p1 (OpenGL ES 3.2, EGL 1.5, GBM; matched to the kbase DDK). The included `kmscube` smoke test renders on HDMI at the 60 Hz vsync. No UI toolkit in the system |
 | USB input | Yes *(upstream)* | eudev + libinput (keyboards/mice/touchscreens) |
 | Audio | Yes *(upstream)* | ES8388 headphone jack + HDMI audio via ALSA (aplay/amixer included) |
 | Watchdog | Yes | dw-wdt armed by Erlang heart (`nerves_heart` 2.5.0, 44 s timeout), NOWAYOUT. Applications must complete the heart init handshake within 600 s (nerves_runtime's StartupGuard does), or heart reboots the board |
