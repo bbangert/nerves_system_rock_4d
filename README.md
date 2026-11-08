@@ -66,7 +66,7 @@ with this fork's UFS boot chain on 2026-11-08.
 | SPI NOR access | Yes | XMC XM25QU128C on the tested board. `loader` mtd + `flashcp` are included; copy the build's `images/u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
 | PCIe / NVMe (FPC) | Untested | Enabled in the device tree; needs the M.2 HAT to verify |
 | UFS modules | Yes | System disk: boot, A/B slots and f2fs data via mainline U-Boot in SPI NOR. Tested with a 128 GB YMTC YMUS8A1TE2D1C1 module (4096-byte sectors; LUN0 is `sda`, plus two 16 MiB LUNs). Power-on to SSH takes 20-30 s. Booting with no module fitted has not been tested |
-| NPU (6 TOPS) | Partial | RKNPU driver 0.9.8 probes (`/dev/dri/renderD129`) and the librknnrt 2.3.2 runtime and headers are installed (`package/librknnrt`); inference not yet run on this release. Build models on the host with rknn-toolkit2 |
+| NPU (6 TOPS) | Yes | RKNPU driver 0.9.8 + librknnrt 2.3.2 runtime and headers (`package/librknnrt`). Inference verified with the rknn-toolkit2 v2.3.2 examples: MobileNetV1 ~3 ms, YOLOv5s-640 ~31 ms. Build models on the host with rknn-toolkit2 |
 | MIPI DSI / CSI | No | Connectors unused; needs panel/camera bring-up |
 | Onboard WiFi in AP mode | Yes *(upstream)* | VintageNetWiFi `mode: :ap` |
 | Thermals | Yes | 2 minutes of all-core stress (2.016/2.208 GHz) peaked at 75.8 °C on the big cores without throttling, back to ~53 °C 10 s later |
