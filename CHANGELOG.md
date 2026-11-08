@@ -2,10 +2,35 @@
 
 ## v0.2.0-dev
 
-In progress. This fork will move boot from the SD card to a Radxa UFS
-module (the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, never SD);
-SD boot will be replaced rather than kept alongside. Nothing below changes
-the boot medium yet.
+In progress. This fork moves boot from the SD card to a Radxa UFS module
+(the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, never SD); SD boot
+is replaced rather than kept alongside. The change is in this branch,
+build-proven only, pending hardware bring-up.
+
+UFS boot:
+
+- Mainline U-Boot v2027.01-rc1 is built inside Buildroot
+  (`images/u-boot-rockchip-spi.bin`, `uboot/ufs.fragment`), with the DDR
+  TPL and BL31 blobs committed under `uboot/rkbin/`. Flashed once to the
+  SPI NOR over maskrom; about 14.4 MiB of the NOR stays free.
+- The U-Boot env is the first 128 KiB of GPT p1 (`env`), found by p1's
+  unique GUID (`CONFIG_ENV_IS_IN_SCSI`). `scripts/check-env-uuid.sh` fails
+  the build if fwup and the U-Boot fragment drift. Single env copy: a torn
+  `saveenv` falls back to the default env and an extlinux boot.
+- New layout for the 4096-byte-sector module: env, bootfs (FAT), rootfs-a,
+  rootfs-b, data (f2fs). `/mnt/boot` is gone; Linux never mounts the
+  512-byte-BPB FAT bootfs.
+- fwup's GPT writer is 512-only, so modules are written with
+  `scripts/flash-ufs.sh` (`fwup -d file.img`, `tools/mk_ufs_image.py`, dd).
+  Do not `fwup -d`/`mix burn` straight to the module. `expand-data` is
+  unavailable; the image tool sizes `data` to the module. On-device OTA is
+  unchanged.
+- `complete` sets `a.nerves_fw_validated=1`; upgrade tasks clear the target
+  slot's flag so a stale `1` cannot hide an unvalidated upgrade.
+- The SD slot is unused. The `mmc0` alias half of the dts patch is now
+  legacy (harmless); the watchdog half is still required.
+- Not yet verified on hardware: `scsi 0` being the user LUN, UFS probe at
+  env-load time, and NOR chip variants.
 
 Pin bumps:
 
