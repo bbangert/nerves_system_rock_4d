@@ -54,6 +54,11 @@ env_uuid=$(sed -n 's/^nerves_env_uuid=\(.*\)$/\1/p' "$UBOOT_ENV")
 [ -n "$fwup_uuid" ] || fail "no define!(UBOOT_ENV_PART_GUID, ...) in $FWUP_COMMON"
 [ -n "$env_uuid" ] || fail "no nerves_env_uuid in $UBOOT_ENV"
 
+# Compared exactly at boot against U-Boot's lowercase `part uuid`, so it can't be case-folded like the others.
+case $env_uuid in
+    *[A-Z]*) fail "nerves_env_uuid=$env_uuid ($UBOOT_ENV) must be lowercase: the boot script compares it exactly against U-Boot's lowercase 'part uuid' output" ;;
+esac
+
 uboot_uuid=$(lower "$uboot_uuid")
 fwup_uuid=$(lower "$fwup_uuid")
 env_uuid=$(lower "$env_uuid")
