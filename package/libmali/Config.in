@@ -12,9 +12,9 @@ config BR2_PACKAGE_LIBMALI
 	select BR2_PACKAGE_LIBDRM
 	help
 	  Proprietary ARM Mali userspace (EGL/GLESv2/GBM) for the
-	  Rockchip RK3576 Mali-G52, DDK g24p0, plain GBM variant (no
-	  X11/Wayland deps). Pairs with the vendor Mali Bifrost kernel
-	  module (CONFIG_MALI_BIFROST) that creates /dev/mali0.
+	  Rockchip RK3576 Mali-G52, DDK g29p1, GLES+GBM variant. Pairs
+	  with the in-kernel Mali Bifrost module (CONFIG_MALI_BIFROST)
+	  that creates /dev/mali0.
 
 	  Forked from Buildroot's rockchip-mali (which is hardcoded to
 	  G31). The blob is downloaded from Rockchip's public libmali

@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.2.0-dev
+
+In progress. This fork will move boot from the SD card to a Radxa UFS
+module (the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, never SD);
+SD boot will be replaced rather than kept alongside. Nothing below changes
+the boot medium yet.
+
+Pin bumps:
+
+- nerves_system_br 1.34.0 -> 1.35.3 (Buildroot 2026.05.x -> 2026.08.1),
+  toolchain 15.3.0 -> 15.3.1, OTP 29.0.3 -> 29.1.2.
+- Kernel: armbian `rk-6.1-rkr5.1` (6.1.115) -> `rk-6.1-rkr7.2` (6.1.172).
+  rkr7.2 dropped `CONFIG_MALI_BIFROST` from `rockchip_linux_defconfig`, so
+  `linux/rk3576.config` is now the only thing enabling Mali. Board dts
+  patch is unchanged.
+- libmali: g24p0-gbm -> `libmali-bifrost-g52-g29p1-gles.so` (JeffyCN/mirrors
+  `libmali-next`), which matches the kernel's kbase DDK (g29p1-12eac0).
+- aic8800: radxa-pkg release -7 -> -10; patch series grew from 25 to 29.
+- librknnrt stays at 2.3.2: the rknpu driver is still 0.9.8, the proven pair.
+
 ## v0.1.1
 
 Firmware validation fixes found during hardware testing:

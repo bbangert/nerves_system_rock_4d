@@ -1,3 +1,2 @@
-# Locally computed; verified byte-identical to the blob shipped in the
-# vendor SDK's external/libmali (rk3576-linux6.1-20251118).
-sha256  bc6be2fd5d8b46bb9d4cb22118a3ff77af1ca46cee1ac12bc78e27f89ba3ea3d  libmali-bifrost-g52-g24p0-gbm.so
+# Locally computed from JeffyCN/mirrors libmali-next @bf621d15
+sha256  02d42b4a49007d8b99865653105783034df9adbd502ccef035038a0c3756c027  libmali-bifrost-g52-g29p1-gles.so

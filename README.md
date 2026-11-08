@@ -6,6 +6,10 @@ recommended, fully-supported configuration. An experimental
 branch builds a mainline LTS kernel instead; it needs no board patches
 but currently lacks the NPU, GPU userspace, and analog audio.
 
+This is a fork of
+[isaiahdw/nerves_system_rock_4d](https://github.com/isaiahdw/nerves_system_rock_4d)
+targeting boot from a UFS module instead of SD.
+
 A [Nerves](https://nerves-project.org) system for the
 [Radxa ROCK 4D](https://docs.radxa.com/en/rock4/rock4d) single-board
 computer. Rockchip RK3576 (4x Cortex-A72 + 4x Cortex-A53, Mali-G52 MC3),
@@ -42,7 +46,7 @@ doesn't need to be touched again.
 
 | Feature | Status | Notes |
 | --- | --- | --- |
-| SD-card boot, A/B firmware slots | Yes | Boots under the factory bootloader out of the box; flash this system's U-Boot to the SPI NOR for automatic revert |
+| SD-card boot, A/B firmware slots | Yes | Still the boot medium on this branch. The fork's v0.2.0 replaces it with UFS-module boot (see UFS row) |
 | OTA updates (`mix upload`) | Yes | Delta updates supported (fwup >= 1.12 on device) |
 | Ethernet | Yes | Gigabit, gmac0 + RTL8211F |
 | WiFi (onboard) | Yes | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Enumerates as `a69c:8d80`, re-enumerates as `8d81` after firmware upload, loads via modalias. USB WiFi dongles also work |
@@ -57,7 +61,7 @@ doesn't need to be touched again.
 | GPIO/I2C/SPI/PWM/UART/CAN header | Yes | Via [Circuits.*](https://elixir-circuits.github.io/); see the 40-pin summary below |
 | SPI NOR access | Yes | `loader` mtd + `flashcp` are included; copy `u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
 | PCIe / NVMe (FPC) | Untested | Enabled in the device tree; needs the M.2 HAT to verify |
-| UFS modules | No | Kernel support present; boot/storage integration not done |
+| UFS modules | **Planned** | v0.2.0: boot + A/B slots on a Radxa UFS module via mainline U-Boot in SPI NOR; not in this branch yet |
 | NPU (6 TOPS) | Yes | RKNPU driver (0.9.8) + librknnrt 2.3.2 runtime and headers (`package/librknnrt`); build models on the host with rknn-toolkit2 |
 | MIPI DSI / CSI | No | Connectors unused; needs panel/camera bring-up |
 | Onboard WiFi in AP mode | Yes | VintageNetWiFi `mode: :ap` |
@@ -83,9 +87,11 @@ is not on Hex; depend on this repository):
 
 # in deps():
 {:nerves_system_rock_4d,
- github: "isaiahdw/nerves_system_rock_4d", tag: "v0.1.1",
+ github: "bbangert/nerves_system_rock_4d", tag: "v0.2.0",
  runtime: false, targets: :rock_4d}
 ```
+
+`v0.2.0` is this fork's first release and is not tagged yet; until then depend on a commit (`ref: "<sha>"`).
 
 Nerves downloads the prebuilt system artifact from this repo's GitHub
 release for the tag. To build the system from source instead (requires
@@ -151,7 +157,7 @@ the FAT partition instead. U-Boot build details and provenance:
 ## Kernel
 
 The kernel source is [armbian/linux-rockchip](https://github.com/armbian/linux-rockchip)
-branch `rk-6.1-rkr5.1` (Rockchip BSP 6.1 + upstream-stable merges + Armbian
+branch `rk-6.1-rkr7.2` (6.1.172; Rockchip BSP 6.1 + upstream-stable merges + Armbian
 fixes), pinned by commit SHA in `nerves_defconfig` and fetched by Buildroot
 as a GitHub archive. Radxa's ROCK 4D device tree (`rk3576-rock-4d-spi`)
 is already in this tree. The only board patch is `linux/0001`, which
@@ -162,7 +168,7 @@ the kernel numbers `mmcblk` devices by alias, so without the patch the
 SD card is `/dev/mmcblk1` and the env, boot, and app-data mounts fail.
 
 The configuration is the in-tree `rockchip_linux_defconfig` plus two
-fragments: `linux/rk3576.config` (Mali Bifrost) and `linux/nerves.config`
+fragments: `linux/rk3576.config` (Mali Bifrost; rkr7.2 no longer enables it in the defconfig) and `linux/nerves.config`
 (Nerves requirements and board deltas, documented inline). One board
 delta worth knowing about: `CONFIG_REALTEK_PHY` for the RTL8211F, which
 the vendor defconfig lacks.
@@ -186,7 +192,7 @@ the vendor code this system carries.
 | WiFi/BT | Quectel FCU760K (AIC8800D80, USB a69c:8d80→8d81), WiFi 6 + BT 5.4, external antennas | package/aic8800 driver; wlan0 + hci0 |
 | Display | HDMI 2.1 up to 4K@120 (VOP + Samsung HDPTX PHY) | fbcon on by default; app takes over DRM |
 | MIPI | DSI 4-lane (up to 2K); CSI 1× 4-lane (or 2× 2-lane) + 1× 2-lane | Not brought up |
-| GPU | Mali G52 MC3 | Vendor kmod (`/dev/mali0`) + libmali GBM blob |
+| GPU | Mali G52 MC3 | Vendor kmod (`/dev/mali0`) + libmali GBM blob (g29p1, matched to the kbase DDK) |
 | NPU | 6 TOPS INT8 RKNPU | Kernel driver 0.9.8 + librknnrt 2.3.2 |
 | Audio | ES8388 codec (3.5 mm 4-pole headphone + mic, drives 32 Ω) + HDMI audio | ALSA; es8323 driver via fallback compatible |
 | USB | 1× USB3 OTG/host (upper; maskrom port), 1× USB3 host, 2× USB2 hosts | OTG port doubles as gadget/`usb0` |

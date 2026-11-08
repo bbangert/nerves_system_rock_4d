@@ -1,5 +1,5 @@
 diff --git a/src/USB/driver_fw/drivers/aic_btusb/aic_btusb.h b/src/USB/driver_fw/drivers/aic_btusb/aic_btusb.h
-index 5171a65..c98b6b1 100644
+index 5171a65..d05606b 100644
 --- a/src/USB/driver_fw/drivers/aic_btusb/aic_btusb.h
 +++ b/src/USB/driver_fw/drivers/aic_btusb/aic_btusb.h
 @@ -37,7 +37,7 @@

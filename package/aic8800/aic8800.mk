@@ -4,14 +4,16 @@
 #
 ################################################################################
 
-# Tag 5.0+git20260123.5f7be68d-7 (2026-07-16). The 00NN-*.patch files are
+# Tag 5.0+git20260123.5f7be68d-10 (2026-10-12). The 00NN-*.patch files are
 # debian/patches from the same tag in series order — they carry
 # kernel-version guards internally, so the full series is safe (and is
-# exactly what Radxa's dkms deb applies on every kernel). Four of them
-# (0006/0017/0019/0020) are regenerated with CRLF-correct context: the
-# vendor sources are CRLF, upstream's patch contexts are LF, and GNU
-# patch refuses the mismatch. Same changes, byte-exact context.
-AIC8800_VERSION = 6e076049b719ac2ff7ce5c92786a680407b11cdb
+# exactly what Radxa's dkms deb applies on every kernel). Two of them
+# (0006/0020) are regenerated with CRLF-correct context: some vendor
+# sources are CRLF, upstream's patch contexts are LF, and GNU patch
+# refuses the mismatch. Same changes, byte-exact context. Upstream
+# patches that are themselves CRLF throughout (e.g. 0017) apply as-is:
+# GNU patch strips their CRs.
+AIC8800_VERSION = e9e43ed79c50483080e9bcdfb08caeeb869d7191
 AIC8800_SITE = $(call github,radxa-pkg,aic8800,$(AIC8800_VERSION))
 # The kernel modules declare MODULE_LICENSE("GPL") (GPL-2.0-or-later);
 # radxa-pkg's repository-level LICENSE (their packaging) is GPL-3.0.
@@ -28,8 +30,10 @@ AIC8800_MODULE_SUBDIRS = \
 	src/USB/driver_fw/drivers/aic8800 \
 	src/USB/driver_fw/drivers/aic_btusb
 
-# Firmware for the D80 only, at the path the (patched) driver reads via
-# filp_open: /lib/firmware/aic8800_fw/USB/aic8800D80 (see patch 0006).
+# Firmware for the D80 only. Patch 0006 sets the
+# /lib/firmware/aic8800_fw/USB prefix; the driver appends the per-chip
+# aic8800D80 dir itself (chip-id dispatch under CONFIG_PLATFORM_UBUNTU,
+# default y in the USB Makefiles).
 define AIC8800_INSTALL_TARGET_CMDS
 	mkdir -p $(TARGET_DIR)/lib/firmware/aic8800_fw/USB
 	cp -a $(@D)/src/USB/driver_fw/fw/aic8800D80 \

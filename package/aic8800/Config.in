@@ -6,7 +6,7 @@ config BR2_PACKAGE_AIC8800
 	  (WiFi 6 + BT 5.4) as found in the ROCK 4D's onboard Quectel
 	  FCU760K module, USB-attached. Radxa's packaging of the vendor
 	  driver, pinned by commit, with Radxa's debian/patches applied
-	  (the stock source does not build on kernel 6.1.115).
+	  (the stock source does not build on kernel 6.1).
 
 	  Builds aic_load_fw.ko (firmware uploader; binds the cold
 	  a69c:8d80 device, uploads firmware, chip re-enumerates as

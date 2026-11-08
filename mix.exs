@@ -1,7 +1,7 @@
 defmodule NervesSystemRock4d.MixProject do
   use Mix.Project
 
-  @github_organization "isaiahdw"
+  @github_organization "bbangert"
   @app :nerves_system_rock_4d
   @source_url "https://github.com/#{@github_organization}/#{@app}"
   @version Path.join(__DIR__, "VERSION")
@@ -69,7 +69,7 @@ defmodule NervesSystemRock4d.MixProject do
   defp deps do
     [
       {:nerves, "~> 1.11", runtime: false},
-      {:nerves_system_br, "1.34.0", runtime: false},
+      {:nerves_system_br, "1.35.3", runtime: false},
       {:nerves_toolchain_aarch64_nerves_linux_gnu, "~> 15.3.0", runtime: false},
       {:nerves_system_linter, "~> 0.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.22", only: :docs, runtime: false}
