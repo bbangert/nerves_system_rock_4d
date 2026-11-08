@@ -62,6 +62,7 @@ jobs:
 
   build:
     # Full Buildroot builds are slow, so only on tags or a manual run.
+    needs: check
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
