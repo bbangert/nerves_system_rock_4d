@@ -53,10 +53,7 @@ defmodule Rock4dBringup.MixProject do
       # version updates, please review their release notes in case
       # changes to your application are needed.
       {:nerves_system_rock_4d,
-       path: "..",
-       runtime: false,
-       targets: :rock_4d,
-       nerves: [compile: false]}
+       path: "..", runtime: false, targets: :rock_4d, nerves: [compile: false]}
     ]
   end
 

@@ -17,7 +17,11 @@ defmodule Rock4dBringup.Application do
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Rock4dBringup.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    with {:ok, pid} <- Supervisor.start_link(children, opts) do
+      init_complete()
+      {:ok, pid}
+    end
   end
 
   # List all child processes to be supervised
@@ -31,7 +35,14 @@ defmodule Rock4dBringup.Application do
         # {Host.Worker, arg},
       ]
     end
+
+    defp init_complete(), do: :ok
   else
+    # The startup guard is off so A/B revert tests can leave a slot
+    # unvalidated, but it is also what completes the heart handshake;
+    # without this nerves_heart reboots the board at 600 s.
+    defp init_complete(), do: Nerves.Runtime.Heart.init_complete()
+
     defp target_children() do
       [
         # Children for all targets except host

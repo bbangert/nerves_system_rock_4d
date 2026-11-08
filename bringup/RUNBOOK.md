@@ -6,7 +6,7 @@ and the decision/dead-end scratchpad are in `plan/`.
 
 ## Binaries
 
-Attached to the `bringup-0.2.0-dev` prerelease on this fork:
+Built from this branch and handed over directly (not published anywhere):
 
 | File | sha256 |
 |---|---|
@@ -27,7 +27,10 @@ mix deps.get && mix firmware   # -> _build/rock_4d_dev/nerves/images/rock4d_brin
 
 ## 1. SPI NOR (one time, maskrom)
 
-Hold MASKROM, plug the upper USB-C (OTG) port into a Linux host with `rkdeveloptool`:
+Hold MASKROM and connect the upper USB 3.0 Type-A port (README item 14) to a
+Linux host with `rkdeveloptool`, using an A-to-A cable. USB-C is power only.
+After `db` the device re-enumerates with a new USB device number, so a
+container or VM passing the USB device through must pick it up again.
 
 ```
 rkdeveloptool ld
