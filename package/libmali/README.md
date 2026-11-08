@@ -1,30 +1,27 @@
 # libmali (Mali-G52 userspace)
 
 Proprietary ARM Mali userspace (EGL/GLESv2/GBM) for the RK3576 Mali-G52,
-DDK g24p0, plain-GBM variant (no X11/Wayland deps). Pairs with the
+DDK g29p1, GLES+GBM variant. Pairs with the
 in-kernel Mali Bifrost module (`CONFIG_MALI_BIFROST`) that creates
 `/dev/mali0`.
 
 Forked from Buildroot's `rockchip-mali` package, which is hardcoded to G31.
 
-## The blob (downloaded — 54 MB)
+## The blob (downloaded — 23.5 MB)
 
-`libmali-bifrost-g52-g24p0-gbm.so` is fetched at build time from Rockchip's
-public libmali distribution — the `libmali` branch of
-[JeffyCN/mirrors](https://github.com/JeffyCN/mirrors/tree/libmali), pinned
-by commit in `libmali.mk` and verified against `libmali.hash` (the public
-blob is byte-identical to the one in the vendor SDK's `external/libmali`).
+`libmali-bifrost-g52-g29p1-gles.so` is fetched at build time from Rockchip's
+public libmali distribution — the `libmali-next` branch of
+[JeffyCN/mirrors](https://github.com/JeffyCN/mirrors/tree/libmali-next),
+pinned by commit in `libmali.mk` and verified against `libmali.hash`. The
+`-gles` file is the only GLES+GBM variant published for g29p1 (it carries
+the GBM platform; there are no `-gbm` suffix variants on that branch).
 
 Headers (`include/`) and pkgconfig (`pkgconfig/`) are committed.
 
 ## DDK version note
 
-The kernel's Mali kmod reports DDK g25p0; this userspace is g24p0
-(the newest G52 GBM variant available). Adjacent DDK releases share the
-kbase UABI, so they are expected to be compatible — verify with `kmscube`.
-If the GPU fails with a kbase version mismatch, try another DDK variant
-from the mirror's `lib/aarch64-linux-gnu/` or switch to the matched
-out-of-tree `mali-driver` kmod.
+The kernel's Mali kmod (kbase, rkr7.2) and this userspace both report DDK
+`g29p1-12eac0`, so they are matched. `kmscube` remains the smoke test.
 
 ## Display notes for EGL/GBM UI stacks
 

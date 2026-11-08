@@ -3,17 +3,19 @@
 # libmali - ARM Mali proprietary userspace (EGL/GLESv2/GBM) for RK3576 G52
 #
 # Forked from Buildroot's rockchip-mali (hardcoded to G31). Downloads the G52
-# g24p0 plain-GBM blob from Rockchip's public libmali distribution (the
-# JeffyCN/mirrors `libmali` branch, pinned by commit; byte-identical to the
-# SDK's external/libmali copy) and installs it with EGL/GLESv2/GBM symlinks
-# against soname libmali.so.1, headers, and pkgconfig. Pairs with the
-# in-kernel Mali Bifrost kmod (/dev/mali0).
+# g29p1 blob from the `libmali-next` branch of JeffyCN/mirrors (Rockchip's
+# public libmali distribution), pinned by commit, and installs it with
+# EGL/GLESv2/GBM symlinks against soname libmali.so.1, headers, and
+# pkgconfig. g29p1 matches the rkr7.2 in-kernel kbase DDK string exactly. The
+# `-gles` file is the only GLES+GBM variant published for g29p1 (no `-gbm`
+# suffix variants exist on that branch). Pairs with the in-kernel Mali
+# Bifrost kmod (/dev/mali0).
 #
 ################################################################################
 
-LIBMALI_VERSION = g24p0
-LIBMALI_BLOB = libmali-bifrost-g52-g24p0-gbm.so
-LIBMALI_MIRROR_COMMIT = 44bcc8e3ed82ee3ff10568d56c30931cda577387
+LIBMALI_VERSION = g29p1
+LIBMALI_BLOB = libmali-bifrost-g52-g29p1-gles.so
+LIBMALI_MIRROR_COMMIT = bf621d15f009509557d6b28f81427651695cac20
 LIBMALI_SITE = https://github.com/JeffyCN/mirrors/raw/$(LIBMALI_MIRROR_COMMIT)/lib/aarch64-linux-gnu
 LIBMALI_SOURCE = $(LIBMALI_BLOB)
 LIBMALI_LICENSE = PROPRIETARY (ARM End User License Agreement)
