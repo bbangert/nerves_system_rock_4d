@@ -55,7 +55,7 @@ with this fork's UFS boot chain on 2026-11-08.
 | Ethernet | Yes | Gigabit (1000/full measured), gmac0 + RTL8211F; DHCP |
 | WiFi (onboard) | Partial | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Re-enumerates from `a69c:8d80` to `8d81` after firmware upload and `aic8800_fdrv` loads; `wlan0` scans 2.4 and 5 GHz. Station connect not yet tested |
 | Bluetooth | Partial | `hci0` registers (aic_btusb, BlueZ mode); no BT userspace is included |
-| HDMI display + console | Partial | Hotplug works and `/dev/fb0` comes up at 1920x1080p60; the framebuffer console is on by default and a KMS app takes the display over. The EDID read fails on the tested 4K TV (DDC reads corrupt partway), so only the fallback modes up to 1080p are offered |
+| HDMI display + console | Yes | Hotplug and EDID work; a 4K TV comes up at 3840x2160p60. The framebuffer console is on by default and a KMS app takes the display over |
 | GPU (Mali G52 MC3) | Yes | Vendor kmod + libmali g29p1 (OpenGL ES 3.2, EGL 1.5, GBM; matched to the kbase DDK). The included `kmscube` smoke test renders on HDMI at the 60 Hz vsync. No UI toolkit in the system |
 | USB input | Yes *(upstream)* | eudev + libinput (keyboards/mice/touchscreens) |
 | Audio | Yes *(upstream)* | ES8388 headphone jack + HDMI audio via ALSA (aplay/amixer included) |
@@ -189,12 +189,15 @@ The kernel source is [armbian/linux-rockchip](https://github.com/armbian/linux-r
 branch `rk-6.1-rkr7.2` (6.1.172; Rockchip BSP 6.1 + upstream-stable merges + Armbian
 fixes), pinned by commit SHA in `nerves_defconfig` and fetched by Buildroot
 as a GitHub archive. Radxa's ROCK 4D device tree (`rk3576-rock-4d-spi`)
-is already in this tree. The only board patch is `linux/0001`, which
+is already in this tree. There are two board patches. `linux/0001`
 does two things: it enables the watchdog node (shipped disabled;
 `nerves_heart` requires `/dev/watchdog0`) and re-points the `mmc0` alias
 at the SD card. Only the watchdog half matters for UFS boot; the alias
 half dates from SD boot (it made the SD card `/dev/mmcblk0`) and is
-harmless here, as nothing uses the SD card.
+harmless here, as nothing uses the SD card. `linux/0002` sets the HDMI
+DDC SDA falling delay (`rockchip,sda-falling-delay-ns = <360>`, as on
+Rockchip's RK3576 EVB). Without it, EDID reads corrupt and only fallback
+modes up to 1080p are offered.
 
 The configuration is the in-tree `rockchip_linux_defconfig` plus two
 fragments: `linux/rk3576.config` (Mali Bifrost; rkr7.2 no longer enables it in the defconfig) and `linux/nerves.config`

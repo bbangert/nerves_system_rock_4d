@@ -11,9 +11,8 @@ XM25QU128C SPI NOR: U-Boot loads its env from SCSI and boots the slot,
 A/B upgrade and validation, revert on reboot and on a power cycle, three
 cold boots, Ethernet, the WiFi driver and scan, `hci0`, RTC, watchdog,
 NPU driver probe, GPU rendering (`kmscube` on HDMI), and thermals under
-load. See the README hardware table for what is still open: the HDMI EDID
-read fails (fallback modes only), and WiFi station connect, NPU inference
-and booting with no module are untested.
+load. See the README hardware table for what is still open: WiFi station
+connect, NPU inference and booting with no module are untested.
 
 UFS boot:
 
@@ -49,6 +48,9 @@ UFS boot:
 - Removed the committed v0.1.x `uboot/u-boot-rockchip-spi.bin` (env on SD,
   unable to find the UFS env, and named like the Buildroot-built image) and
   its `scripts/build-uboot.sh`; both remain at tag v0.1.1.
+- HDMI EDID now reads: `linux/0002` sets the DDC SDA falling delay
+  (`rockchip,sda-falling-delay-ns = <360>`). Without it EDID reads
+  corrupted and only fallback modes up to 1080p were offered.
 - The README no longer claims USB gadget ethernet: both dwc3 controllers
   are host-only in this device tree. The maskrom port is the upper USB 3.0
   Type-A port.
