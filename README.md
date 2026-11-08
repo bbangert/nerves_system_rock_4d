@@ -43,28 +43,33 @@ to be touched again. About 14.4 MiB of the NOR stays free.
 
 ## Hardware support
 
+Rows marked *(upstream)* come from the v0.1.x SD-boot release and were not
+re-tested after the move to UFS. Everything else was measured on a ROCK 4D
+with this fork's UFS boot chain on 2026-11-08.
+
 | Feature | Status | Notes |
 | --- | --- | --- |
 | SD card | No | This fork boots from a UFS module; the SD slot is unused (the BootROM never boots SD) |
-| A/B firmware slots | Untested | On the UFS module; see the UFS row |
-| OTA updates (`mix upload`) | Yes | Delta updates supported (fwup >= 1.12 on device) |
-| Ethernet | Yes | Gigabit, gmac0 + RTL8211F |
-| WiFi (onboard) | Yes | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Enumerates as `a69c:8d80`, re-enumerates as `8d81` after firmware upload, loads via modalias. USB WiFi dongles also work |
+| A/B firmware slots | Yes | Upgrade to the inactive slot, revert of an unvalidated slot on reboot and on a power cycle, persistence once validated, `Nerves.Runtime.revert/0`; only env p1 changes and both GPTs stay intact |
+| OTA updates (`mix upload`) | Yes | `fwup` over SSH; delta updates supported (fwup >= 1.12 on device) |
+| Ethernet | Yes | Gigabit (1000/full measured), gmac0 + RTL8211F; DHCP |
+| WiFi (onboard) | Partial | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Re-enumerates from `a69c:8d80` to `8d81` after firmware upload and `aic8800_fdrv` loads; `wlan0` scans 2.4 and 5 GHz. Station connect not yet tested |
 | Bluetooth | Partial | `hci0` registers (aic_btusb, BlueZ mode); no BT userspace is included |
-| HDMI display + console | Yes | Framebuffer console enabled by default; a KMS app takes the display over |
-| GPU (Mali G52 MC3) | Yes | Vendor kmod + libmali (EGL/GLES/GBM); `kmscube` is included as a smoke test. No UI toolkit in the system |
-| USB input | Yes | eudev + libinput (keyboards/mice/touchscreens) |
-| Audio | Yes | ES8388 headphone jack + HDMI audio via ALSA (aplay/amixer included) |
-| Watchdog | Yes | dw-wdt armed by Erlang heart (`nerves_heart`), NOWAYOUT |
-| RTC | Yes | HYM8563; sets the clock at boot. Battery backup via the 2-pin socket on the board underside (CR2032 with a 1.25 mm-pitch plug lead, not a bare coin cell) |
+| HDMI display + console | Untested | Framebuffer console enabled by default; a KMS app takes the display over. Worked on v0.1.x |
+| GPU (Mali G52 MC3) | Partial | Vendor kmod loads and libmali g29p1 (EGL/GLES/GBM, matched to the kbase DDK) is installed. `kmscube` is included as a smoke test but needs a display and has not been run on this release. No UI toolkit in the system |
+| USB input | Yes *(upstream)* | eudev + libinput (keyboards/mice/touchscreens) |
+| Audio | Yes *(upstream)* | ES8388 headphone jack + HDMI audio via ALSA (aplay/amixer included) |
+| Watchdog | Yes | dw-wdt armed by Erlang heart (`nerves_heart` 2.5.0, 44 s timeout), NOWAYOUT. Applications must complete the heart init handshake within 600 s (nerves_runtime's StartupGuard does), or heart reboots the board |
+| RTC | Yes | HYM8563 (`rtc0`); keeps time and sets the clock at boot. Battery backup via the 2-pin socket on the board underside (CR2032 with a 1.25 mm-pitch plug lead, not a bare coin cell) |
 | USB hosts | Yes | 2x USB3 + 2x USB2, all host-only: both dwc3 controllers are `dr_mode = "host"` in this device tree, so there is no `usb0` gadget ethernet |
-| GPIO/I2C/SPI/PWM/UART/CAN header | Yes | Via [Circuits.*](https://elixir-circuits.github.io/); see the 40-pin summary below |
-| SPI NOR access | Yes | `loader` mtd + `flashcp` are included; copy the build's `images/u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
+| GPIO/I2C/SPI/PWM/UART/CAN header | Yes *(upstream)* | Via [Circuits.*](https://elixir-circuits.github.io/); see the 40-pin summary below |
+| SPI NOR access | Yes | XMC XM25QU128C on the tested board. `loader` mtd + `flashcp` are included; copy the build's `images/u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
 | PCIe / NVMe (FPC) | Untested | Enabled in the device tree; needs the M.2 HAT to verify |
-| UFS modules | Untested | Implemented and build-proven, not yet run on hardware: boot + A/B slots on a Radxa UFS module (4096-byte sectors) via mainline U-Boot in SPI NOR |
-| NPU (6 TOPS) | Yes | RKNPU driver (0.9.8) + librknnrt 2.3.2 runtime and headers (`package/librknnrt`); build models on the host with rknn-toolkit2 |
+| UFS modules | Yes | System disk: boot, A/B slots and f2fs data via mainline U-Boot in SPI NOR. Tested with a 128 GB YMTC YMUS8A1TE2D1C1 module (4096-byte sectors; LUN0 is `sda`, plus two 16 MiB LUNs). Power-on to SSH takes 20-30 s. Booting with no module fitted has not been tested |
+| NPU (6 TOPS) | Partial | RKNPU driver 0.9.8 probes (`/dev/dri/renderD129`) and the librknnrt 2.3.2 runtime and headers are installed (`package/librknnrt`); inference not yet run on this release. Build models on the host with rknn-toolkit2 |
 | MIPI DSI / CSI | No | Connectors unused; needs panel/camera bring-up |
-| Onboard WiFi in AP mode | Yes | VintageNetWiFi `mode: :ap` |
+| Onboard WiFi in AP mode | Yes *(upstream)* | VintageNetWiFi `mode: :ap` |
+| Thermals | Yes | 2 minutes of all-core stress (2.016/2.208 GHz) peaked at 75.8 °C on the big cores without throttling, back to ~53 °C 10 s later |
 
 ## Building
 
@@ -91,8 +96,6 @@ is not on Hex; depend on this repository):
  github: "bbangert/nerves_system_rock_4d", tag: "v0.2.0",
  runtime: false, targets: :rock_4d}
 ```
-
-`v0.2.0` is this fork's first release and is not tagged yet; until then depend on a commit (`ref: "<sha>"`).
 
 Nerves downloads the prebuilt system artifact from this repo's GitHub
 release for the tag. To build the system from source instead (requires
@@ -201,7 +204,7 @@ the vendor defconfig lacks.
 
 Mainline support for the ROCK 4D is improving: the dts landed in 6.15,
 ethernet/PCIe/USB/HDMI-audio/UFS were complete around 6.17, and mainline
-U-Boot supports the board since v2026.01 (which this system uses). A
+U-Boot supports the board since v2026.01 (this system uses v2027.01-rc1). A
 future migration to a mainline kernel plus Panfrost would drop most of
 the vendor code this system carries.
 
@@ -211,7 +214,7 @@ the vendor code this system carries.
 | --- | --- | --- |
 | SoC | Rockchip RK3576 (RK3576J on industrial SKUs), 4×Cortex-A72 @ 2.2 GHz + 4×Cortex-A53 @ 2.0 GHz | RK806 PMIC (i2c 0x23) |
 | RAM | LPDDR5, 2/4/8/16 GB SKUs | DDR init blob handles LP4/LP5 |
-| Boot flash | 16 MB SPI NOR on sfc0 | mtd `loader`; holds U-Boot |
+| Boot flash | 16 MB SPI NOR on sfc0 (XMC XM25QU128C on the tested board) | mtd `loader`; holds U-Boot |
 | microSD | sdmmc, UHS-I SDR104 | Unused by this fork |
 | eMMC/UFS connector | UFS modules 64 GB–1 TB | The Nerves system disk (4096-byte sectors); eMMC modules unsupported on SPI-NOR (standard) SKUs |
 | Ethernet | GbE, gmac0 + Realtek RTL8211F (RGMII) | PoE via the optional PoE+ HAT |
