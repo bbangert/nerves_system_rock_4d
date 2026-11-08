@@ -2,11 +2,12 @@
 
 ## v0.2.0-dev
 
-In progress. This fork moves boot from the SD card to a Radxa UFS module,
-because the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, and never
-SD. SD boot is replaced rather than kept alongside.
+In progress. This fork will move boot from the SD card to a Radxa UFS
+module (the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, never SD);
+SD boot will be replaced rather than kept alongside. Nothing below changes
+the boot medium yet.
 
-Pin bumps (done):
+Pin bumps:
 
 - nerves_system_br 1.34.0 -> 1.35.3 (Buildroot 2026.05.x -> 2026.08.1),
   toolchain 15.3.0 -> 15.3.1, OTP 29.0.3 -> 29.1.2.

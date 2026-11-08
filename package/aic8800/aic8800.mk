@@ -30,8 +30,10 @@ AIC8800_MODULE_SUBDIRS = \
 	src/USB/driver_fw/drivers/aic8800 \
 	src/USB/driver_fw/drivers/aic_btusb
 
-# Firmware for the D80 only, at the path the (patched) driver reads via
-# filp_open: /lib/firmware/aic8800_fw/USB/aic8800D80 (see patch 0006).
+# Firmware for the D80 only. Patch 0006 sets the
+# /lib/firmware/aic8800_fw/USB prefix; the driver appends the per-chip
+# aic8800D80 dir itself (chip-id dispatch under CONFIG_PLATFORM_UBUNTU,
+# default y in the USB Makefiles).
 define AIC8800_INSTALL_TARGET_CMDS
 	mkdir -p $(TARGET_DIR)/lib/firmware/aic8800_fw/USB
 	cp -a $(@D)/src/USB/driver_fw/fw/aic8800D80 \

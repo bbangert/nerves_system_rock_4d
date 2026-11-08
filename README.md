@@ -46,7 +46,7 @@ doesn't need to be touched again.
 
 | Feature | Status | Notes |
 | --- | --- | --- |
-| SD-card boot, A/B firmware slots | Replaced | This fork boots from a UFS module; SD is not used (see UFS row) |
+| SD-card boot, A/B firmware slots | Yes | Still the boot medium on this branch. The fork's v0.2.0 replaces it with UFS-module boot (see UFS row) |
 | OTA updates (`mix upload`) | Yes | Delta updates supported (fwup >= 1.12 on device) |
 | Ethernet | Yes | Gigabit, gmac0 + RTL8211F |
 | WiFi (onboard) | Yes | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Enumerates as `a69c:8d80`, re-enumerates as `8d81` after firmware upload, loads via modalias. USB WiFi dongles also work |
@@ -61,7 +61,7 @@ doesn't need to be touched again.
 | GPIO/I2C/SPI/PWM/UART/CAN header | Yes | Via [Circuits.*](https://elixir-circuits.github.io/); see the 40-pin summary below |
 | SPI NOR access | Yes | `loader` mtd + `flashcp` are included; copy `u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
 | PCIe / NVMe (FPC) | Untested | Enabled in the device tree; needs the M.2 HAT to verify |
-| UFS modules | **Planned** | Boot + A/B slots on a Radxa UFS module via mainline U-Boot in SPI NOR; in progress on this fork |
+| UFS modules | **Planned** | v0.2.0: boot + A/B slots on a Radxa UFS module via mainline U-Boot in SPI NOR; not in this branch yet |
 | NPU (6 TOPS) | Yes | RKNPU driver (0.9.8) + librknnrt 2.3.2 runtime and headers (`package/librknnrt`); build models on the host with rknn-toolkit2 |
 | MIPI DSI / CSI | No | Connectors unused; needs panel/camera bring-up |
 | Onboard WiFi in AP mode | Yes | VintageNetWiFi `mode: :ap` |
@@ -90,6 +90,8 @@ is not on Hex; depend on this repository):
  github: "bbangert/nerves_system_rock_4d", tag: "v0.2.0",
  runtime: false, targets: :rock_4d}
 ```
+
+`v0.2.0` is this fork's first release and is not tagged yet; until then depend on a commit (`ref: "<sha>"`).
 
 Nerves downloads the prebuilt system artifact from this repo's GitHub
 release for the tag. To build the system from source instead (requires
