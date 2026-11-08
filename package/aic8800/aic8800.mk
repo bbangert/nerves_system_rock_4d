@@ -4,15 +4,16 @@
 #
 ################################################################################
 
-# Tag 5.0+git20260123.5f7be68d-10 (2026-10-12). The 00NN-*.patch files are
-# debian/patches from the same tag in series order — they carry
+# Tag 5.0+git20260123.5f7be68d-10 (2026-10-12). 0001-0029 mirror the
+# debian/patches from the same tag in series order; they carry
 # kernel-version guards internally, so the full series is safe (and is
 # exactly what Radxa's dkms deb applies on every kernel). Two of them
 # (0006/0020) are regenerated with CRLF-correct context: some vendor
 # sources are CRLF, upstream's patch contexts are LF, and GNU patch
 # refuses the mismatch. Same changes, byte-exact context. Upstream
 # patches that are themselves CRLF throughout (e.g. 0017) apply as-is:
-# GNU patch strips their CRs.
+# GNU patch strips their CRs. 0030 is fork-local (NUL-terminates the SDIO
+# get_fw_path override copy) and is not in radxa-pkg's series.
 AIC8800_VERSION = e9e43ed79c50483080e9bcdfb08caeeb869d7191
 AIC8800_SITE = $(call github,radxa-pkg,aic8800,$(AIC8800_VERSION))
 # The kernel modules declare MODULE_LICENSE("GPL") (GPL-2.0-or-later);
