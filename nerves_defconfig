@@ -31,8 +31,10 @@ BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
 # armbian/linux-rockchip branch rk-6.1-rkr7.2 (Rockchip BSP 6.1 + stable
 # merges + Armbian fixes; kernel 6.1.172), pinned to the 2026-11-04 tip.
 # The ROCK 4D's device tree (rk3576-rock-4d-spi) is already in this tree;
-# the only board patch is linux/0001 (watchdog enable + mmc0 alias). Both
-# halves are still missing upstream, and the patch applies cleanly here.
+# the only board patch is linux/0001 (watchdog enable + mmc0 alias). The
+# watchdog half is required for nerves_heart; the mmc0 alias half is legacy
+# from SD boot and harmless on UFS. Both are still missing upstream, and the
+# patch applies cleanly here.
 BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/armbian/linux-rockchip/archive/858550966271b1f59897a106bc3f92842ea0e750.tar.gz"
 BR2_LINUX_KERNEL_PATCH="${NERVES_DEFCONFIG_DIR}/linux"
 # Same config Radxa's vendor build uses (rockchip_linux_defconfig + rk3576
@@ -65,14 +67,37 @@ BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
 BR2_PACKAGE_WPA_SUPPLICANT_CTRL_IFACE=y
 # BR2_TARGET_ROOTFS_TAR is not set
 BR2_PACKAGE_HOST_KMOD_XZ=y
-# uboot-env.bin is generated from uboot/uboot.env; U-Boot itself lives in
-# the onboard SPI NOR and is built/flashed out of band (see uboot/README.md).
+# Mainline U-Boot for the onboard SPI NOR (flashed once over maskrom, see
+# uboot/README.md). v2027.01-rc1 rather than v2026.10: it is the first tag
+# whose rock-4d defconfig enables SPI_FLASH_XMC (V1.12 boards ship an XMC
+# NOR; without it SPL cannot load U-Boot proper), and the tag the UFS env
+# config was proven against.
+BR2_TARGET_UBOOT=y
+BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG=y
+BR2_TARGET_UBOOT_CUSTOM_TARBALL=y
+BR2_TARGET_UBOOT_CUSTOM_TARBALL_LOCATION="https://github.com/u-boot/u-boot/archive/refs/tags/v2027.01-rc1.tar.gz"
+BR2_TARGET_UBOOT_BOARD_DEFCONFIG="rock-4d-rk3576"
+BR2_TARGET_UBOOT_CONFIG_FRAGMENT_FILES="${NERVES_DEFCONFIG_DIR}/uboot/ufs.fragment"
+BR2_TARGET_UBOOT_NEEDS_DTC=y
+BR2_TARGET_UBOOT_NEEDS_PYLIBFDT=y
+BR2_TARGET_UBOOT_NEEDS_PYELFTOOLS=y
+BR2_TARGET_UBOOT_NEEDS_OPENSSL=y
+BR2_TARGET_UBOOT_USE_BINMAN=y
+# BR2_TARGET_UBOOT_FORMAT_BIN is not set
+BR2_TARGET_UBOOT_FORMAT_CUSTOM=y
+BR2_TARGET_UBOOT_FORMAT_CUSTOM_NAME="u-boot-rockchip-spi.bin"
+# Committed rkbin blobs (see uboot/rkbin/README.md), not Buildroot's
+# rockchip-rkbin package: that pins an older rkbin than the DDR/BL31 pair
+# this board was proven with.
+BR2_TARGET_UBOOT_CUSTOM_MAKEOPTS="ROCKCHIP_TPL=${NERVES_DEFCONFIG_DIR}/uboot/rkbin/rk3576_ddr_lp4_2112MHz_lp5_2736MHz_v1.12.bin BL31=${NERVES_DEFCONFIG_DIR}/uboot/rkbin/rk3576_bl31_v1.24.elf"
+# uboot-env.bin from uboot/uboot.env. The size must equal CONFIG_ENV_SIZE in
+# uboot/ufs.fragment: both CRCs cover size - 4 bytes.
 BR2_PACKAGE_HOST_UBOOT_TOOLS=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_ENVIMAGE=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_ENVIMAGE_SOURCE="${NERVES_DEFCONFIG_DIR}/uboot/uboot.env"
 BR2_PACKAGE_HOST_UBOOT_TOOLS_ENVIMAGE_SIZE="131072"
 BR2_NERVES_SYSTEM_NAME="nerves_system_rock_4d"
-BR2_NERVES_ADDITIONAL_IMAGE_FILES="${NERVES_DEFCONFIG_DIR}/fwup.conf ${NERVES_DEFCONFIG_DIR}/extlinux-a.conf ${NERVES_DEFCONFIG_DIR}/extlinux-b.conf ${NERVES_DEFCONFIG_DIR}/uboot/u-boot-rockchip-spi.bin"
+BR2_NERVES_ADDITIONAL_IMAGE_FILES="${NERVES_DEFCONFIG_DIR}/fwup.conf ${NERVES_DEFCONFIG_DIR}/extlinux-a.conf ${NERVES_DEFCONFIG_DIR}/extlinux-b.conf"
 BR2_PACKAGE_NBTTY=y
 # Onboard WiFi/BT: Quectel FCU760K (AIC8800D80, USB). Out-of-tree driver +
 # firmware; all three modules autoload via USB modalias (eudev), the dts

@@ -1,25 +1,9 @@
 #!/bin/sh
 #
-# Reproducibly build the committed U-Boot blobs for the ROCK 4D from mainline
-# U-Boot + the required Rockchip binary blobs (rkbin: DDR-init TPL and BL31 —
-# there is no open-source DRAM init or BL31 for the RK3576), in a Docker
-# container.
-#
-# Produces, in uboot/:
-#   u-boot-rockchip-spi.bin  The complete SPI NOR image (idbloader at 0 +
-#                            U-Boot FIT at 0x60000). Flash to the onboard
-#                            16 MB SPI NOR — the ROCK 4D boot ROM only boots
-#                            from SPI NOR/UFS/USB, never from SD.
-#   u-boot-rockchip.bin      Same boot chain laid out for block storage
-#                            (idbloader @ sector 64 + FIT @ sector 16384).
-#                            For UFS experiments only — not committed.
-#
-# The build adds the Nerves environment support on top of the stock
-# rock-4d-rk3576_defconfig: env in MMC (the SD card, mmc dev 0) at 0xF00000,
-# shared with fwup/nerves_runtime (see uboot/uboot.env and
-# fwup_include/fwup-common.conf).
-#
-# Usage: scripts/build-uboot.sh
+# LEGACY. Buildroot now builds U-Boot (BR2_TARGET_UBOOT in nerves_defconfig).
+# This Docker recipe is kept only as the provenance of the committed v0.1.x
+# uboot/u-boot-rockchip-spi.bin (v2026.01, env on the SD card); nothing in the
+# build uses it.
 #
 set -e
 

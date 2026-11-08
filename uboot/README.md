@@ -1,42 +1,60 @@
 # U-Boot boot chain
 
-The ROCK 4D boot ROM does not boot from the SD card. Its boot order is
-SPI NOR → UFS → USB (maskrom), and every standard ROCK 4D ships with a
-16 MB SPI NOR on board. U-Boot therefore lives in the SPI NOR and the SD
-card only carries the Nerves environment, kernels and root filesystems:
+The ROCK 4D boot ROM order is SPI NOR → UFS → USB (maskrom); it never
+boots from SD. Every standard ROCK 4D has a 16 MB SPI NOR on board, so
+U-Boot lives there and the UFS module only carries the Nerves environment,
+kernels and root filesystems:
 
-| Blob                      | Location                  | Contents                                                         |
-| ------------------------- | ------------------------- | ---------------------------------------------------------------- |
-| `u-boot-rockchip-spi.bin` | SPI NOR, offset 0         | idblock (DDR init + SPL) + FIT (U-Boot proper + BL31) at 0x60000 |
-| `uboot-env.bin`           | SD card, 15 MB (0xF00000) | Nerves environment (built from `uboot.env`)                      |
+| Blob                      | Location                       | Contents                                                         |
+| ------------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| `u-boot-rockchip-spi.bin` | SPI NOR, offset 0              | idblock (DDR init + SPL) + FIT (U-Boot proper + BL31) at 0x60000 |
+| `uboot-env.bin`           | UFS LUN, start of GPT p1 `env` | Nerves environment (built from `uboot.env`)                      |
 
-The committed `u-boot-rockchip-spi.bin` is mainline U-Boot v2026.01
-(`rock-4d-rk3576_defconfig`, added upstream in October 2025) plus the
-Rockchip rkbin blobs (RK3576 DDR init v1.12, BL31 v1.24 — there is no
-open-source DRAM init or BL31 for this SoC), with the Nerves environment
-support added:
-`CONFIG_ENV_IS_IN_MMC=y`, `CONFIG_ENV_OFFSET=0xF00000`,
-`CONFIG_ENV_SIZE=0x20000`, `CONFIG_SYS_MMC_ENV_DEV=0` (the SD card).
+## Build
 
-Rebuild it reproducibly with `scripts/build-uboot.sh` (Docker; pinned
-U-Boot tag + rkbin commit). The script also produces `u-boot-rockchip.bin`
-(the same boot chain laid out for block storage, useful for future UFS
-experiments); that variant is not committed.
+Buildroot builds `u-boot-rockchip-spi.bin` (`BR2_TARGET_UBOOT` in
+`nerves_defconfig`) from mainline U-Boot v2027.01-rc1,
+`rock-4d-rk3576_defconfig` plus `ufs.fragment`. binman packs the Rockchip
+DDR-init TPL and BL31 from `rkbin/` (provenance and hashes in
+`rkbin/README.md`). The result lands in the system's `images/` directory.
 
-Licensing of the committed binaries: U-Boot itself is GPL-2.0-or-later
-(corresponding source: the pinned tag at https://source.denx.de/u-boot/u-boot
-plus this script). The DDR-init and BL31 components inside both
-`u-boot-rockchip-spi.bin` and `rk3576_spl_loader_v1.09.108.bin` are
+`ufs.fragment` adds:
+
+- `ENV_IS_IN_SCSI` with `ENV_SCSI_PART_UUID`: U-Boot reads the env from the
+  start of the GPT partition whose **unique** GUID matches. That GUID is
+  `UBOOT_ENV_PART_GUID` in `fwup_include/fwup-common.conf`, p1's `guid`.
+  The two must be identical; `scripts/check-env-uuid.sh` runs from
+  `post-build.sh` and fails the build if they are not. To change it, edit
+  both.
+- `ENV_SIZE=0x20000`, which must equal `UBOOT_ENV_COUNT` × 512 and the
+  `uboot-env.bin` size (both sides CRC `size - 4` bytes).
+- `FS_FAT_HANDLE_SECTOR_SIZE_MISMATCH`: fwup can only make a 512-byte-BPB
+  FAT, and U-Boot otherwise refuses it on the 4096-byte-sector LUN.
+- SPI NOR vendor drivers (XMC, Macronix, GigaDevice, Winbond): the NOR part
+  differs between board revisions.
+
+The committed `uboot/u-boot-rockchip-spi.bin` is the previous v2026.01
+blob from v0.1.x, kept only until the Buildroot-built image is proven on
+hardware. Do NOT flash it with this layout: its env lives at 0xF00000 on
+mmc, so it would never find the UFS env.
+
+`scripts/build-uboot.sh` is the legacy Docker recipe for the committed
+v0.1.x `u-boot-rockchip-spi.bin` (v2026.01, env on SD). It is not used.
+
+Licensing: U-Boot is GPL-2.0-or-later (corresponding source: the pinned
+tag at https://github.com/u-boot/u-boot). The DDR-init and BL31 components
+in `u-boot-rockchip-spi.bin` and `rk3576_spl_loader_v1.09.108.bin` are
 Rockchip proprietary blobs from
 [rockchip-linux/rkbin](https://github.com/rockchip-linux/rkbin),
-redistributable per `LICENSES/LICENSE.rockchip-rkbin`.
+redistributable per `rkbin/LICENSE` (= `LICENSES/LICENSE.rockchip-rkbin`).
 
 ## Boot and automatic revert
 
-U-Boot runs the `nerves_init`/`nerves_boot` scripts from the environment
-block on the SD card and boots the active slot's `Image.<slot>` + dtb
-directly (`root=PARTUUID=<slot GUID>`). Automatic revert follows the
-standard Nerves model:
+U-Boot loads the env from p1 (the lookup runs `scsi scan`), then runs
+`nerves_init`/`nerves_boot`: it loads the active slot's `Image.<slot>` and
+dtb from the FAT bootfs (`scsi 0:2`) and boots them directly
+(`root=PARTUUID=<slot GUID>`). Automatic revert follows the standard Nerves
+model:
 
 - U-Boot: with `nerves_fw_autovalidate=0`, new firmware boots once
   (`booted` 0→1) leaving `nerves_fw_validated=0`. If the next boot still
@@ -45,14 +63,15 @@ standard Nerves model:
   (sets `validated=1`), or the update reverts.
 
 If `nerves_boot` ever fails, `bootcmd` falls through to `bootflow scan -lb`,
-which boots `extlinux/extlinux.conf` from the FAT partition. A missing or
-corrupt environment block makes U-Boot fall back to its compiled-in default
-environment, which does the same — a bad environment cannot brick the
-device.
+which boots `extlinux/extlinux.conf` from the bootfs. A missing or corrupt
+environment block makes U-Boot fall back to its compiled-in default
+environment, which does the same, so a bad environment cannot brick the
+device. The env is a single copy (`env/scsi.c` has no redundant mode): a
+torn `saveenv` costs the revert on that one boot.
 
-## uboot.env — the shared firmware/boot environment
+## uboot.env: the shared firmware/boot environment
 
-`uboot.env` is compiled into `uboot-env.bin` and written raw at 15 MB
+`uboot.env` is compiled into `uboot-env.bin` and written at the start of p1
 (`UBOOT_ENV_OFFSET`, see `fwup_include/fwup-common.conf` and
 `rootfs_overlay/etc/fw_env.config`). It is a single fw_env block shared by
 three parties: U-Boot reads it to pick the boot slot, `nerves_runtime`/
@@ -61,28 +80,21 @@ reads the serial number.
 
 ## Flashing the SPI NOR (one-time provisioning, via maskrom)
 
-A new board ships with Radxa's U-Boot in the SPI NOR. Radxa's U-Boot does
-extlinux/distro boot, and this system's SD card keeps a valid
-`extlinux/extlinux.conf` at all times — so a fresh board boots the Nerves
-SD on the factory bootloader, minus the Nerves env integration: no
-automatic revert of unvalidated firmware (upgrades still switch slots via
-the extlinux.conf swap). That is fine for bench work; flash ours when you
-want the full boot chain.
-
-Flashing is done over USB from the host — no OS on the board involved.
+Flashing is done over USB from the host, with no OS on the board involved.
 Hold the MASKROM button while applying power. The maskrom USB device
 appears on the upper USB 3.0 Type-A OTG port (top-left, nearest the
-corner) — use a USB-A↔A or USB-A↔C data cable to the host. Then, from
-this directory:
+corner); use a USB-A↔A or USB-A↔C data cable to the host. Then, with
+`u-boot-rockchip-spi.bin` from the system's `images/` directory:
 
 ```sh
-rkdeveloptool db rk3576_spl_loader_v1.09.108.bin  # bootstrap the loader
-rkdeveloptool cs 9                                # switch storage to SPI NOR
-rkdeveloptool wl 0 u-boot-rockchip-spi.bin        # write at offset 0
-rkdeveloptool rd                                  # reboot
+rkdeveloptool db uboot/rk3576_spl_loader_v1.09.108.bin  # bootstrap the loader
+rkdeveloptool cs 9                                      # select the SPI NOR
+rkdeveloptool wl 0 u-boot-rockchip-spi.bin              # write at offset 0
+rkdeveloptool rd                                        # reboot
 ```
 
-Verify on the serial console: the U-Boot banner should read v2026.01.
+Verify on the serial console: the U-Boot banner should read
+v2027.01-rc1.
 
 `rk3576_spl_loader_v1.09.108.bin` is the RK3576 maskrom download loader,
 built from the Rockchip vendor SDK's U-Boot (`./make.sh rk3576` packs it
@@ -91,8 +103,18 @@ rkdeveloptool build, use a current build from
 https://github.com/rockchip-linux/rkdeveloptool or Rockchip's RKDevTool
 on Windows.
 
-Maskrom is also the recovery path if a NOR write is ever interrupted —
-the BootROM always runs first, so the board is not brickable this way.
+Maskrom is also the recovery path if a NOR write is ever interrupted: the
+BootROM always runs first, so the board is not brickable this way.
 
-Serial console for watching the boot: UART0 on the 40-pin header — pin 8
+## Reflashing from a running system
+
+The `-spi` device tree exposes the NOR as the `loader` MTD partition, and
+the system ships `flashcp`:
+
+```sh
+grep loader /proc/mtd          # e.g. mtd0: 01000000 00001000 "loader"
+flashcp -v u-boot-rockchip-spi.bin /dev/mtd0
+```
+
+Serial console for watching the boot: UART0 on the 40-pin header, pin 8
 (TX), pin 10 (RX), pin 6 (GND), 1500000 8N1, no flow control.
