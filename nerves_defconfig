@@ -3,8 +3,9 @@ BR2_cortex_a72=y
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
 BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
-BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/nerves-project/toolchains/releases/download/v15.3.0/nerves_toolchain_aarch64_nerves_linux_gnu-linux_${shell uname -m}-15.3.0-8DAF9F3.tar.xz"
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/nerves-project/toolchains/releases/download/v15.3.1/nerves_toolchain_aarch64_nerves_linux_gnu-linux_${shell uname -m}-15.3.1-C0D130A.tar.xz"
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="aarch64-nerves-linux-gnu"
+BR2_TOOLCHAIN_EXTERNAL_GCC_15=y
 BR2_TOOLCHAIN_EXTERNAL_HEADERS_6_0=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
 # BR2_TOOLCHAIN_EXTERNAL_INET_RPC is not set
@@ -27,11 +28,12 @@ BR2_ROOTFS_POST_BUILD_SCRIPT="${NERVES_DEFCONFIG_DIR}/post-build.sh ${BR2_EXTERN
 BR2_ROOTFS_POST_IMAGE_SCRIPT="${NERVES_DEFCONFIG_DIR}/post-createfs.sh"
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
-# armbian/linux-rockchip branch rk-6.1-rkr5.1 (Rockchip BSP 6.1 + stable
-# merges + Armbian fixes; kernel 6.1.115), pinned to the 2026-07-15 tip.
+# armbian/linux-rockchip branch rk-6.1-rkr7.2 (Rockchip BSP 6.1 + stable
+# merges + Armbian fixes; kernel 6.1.172), pinned to the 2026-11-04 tip.
 # The ROCK 4D's device tree (rk3576-rock-4d-spi) is already in this tree;
-# the only board patch is linux/0001 (watchdog enable + mmc0 alias).
-BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/armbian/linux-rockchip/archive/5280f9b4336199c4025c8eed894d2b4e2268dcc6.tar.gz"
+# the only board patch is linux/0001 (watchdog enable + mmc0 alias). Both
+# halves are still missing upstream, and the patch applies cleanly here.
+BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/armbian/linux-rockchip/archive/858550966271b1f59897a106bc3f92842ea0e750.tar.gz"
 BR2_LINUX_KERNEL_PATCH="${NERVES_DEFCONFIG_DIR}/linux"
 # Same config Radxa's vendor build uses (rockchip_linux_defconfig + rk3576
 # Mali fragment) plus Nerves requirements.
