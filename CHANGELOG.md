@@ -2,10 +2,44 @@
 
 ## v0.2.0-dev
 
-In progress. This fork will move boot from the SD card to a Radxa UFS
-module (the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, never SD);
-SD boot will be replaced rather than kept alongside. Nothing below changes
-the boot medium yet.
+In progress. This fork moves boot from the SD card to a Radxa UFS module
+(the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, never SD); SD boot
+is replaced rather than kept alongside. The change is in this branch,
+build-proven only, pending hardware bring-up.
+
+UFS boot:
+
+- Mainline U-Boot v2027.01-rc1 is built inside Buildroot
+  (`images/u-boot-rockchip-spi.bin`, `uboot/ufs.fragment`), with the DDR
+  TPL and BL31 blobs committed under `uboot/rkbin/`. Flashed once to the
+  SPI NOR over maskrom; about 14.4 MiB of the NOR stays free.
+- The U-Boot env is the first 128 KiB of GPT p1 (`env`), found by p1's
+  unique GUID (`CONFIG_ENV_IS_IN_SCSI`), and the kernel loads use the SCSI
+  device whose p1 has that GUID rather than assuming `scsi 0`.
+  `scripts/check-env-config.sh` fails the build if fwup, the U-Boot
+  fragment, `uboot.env`, the env image size and `fw_env.config` disagree on
+  the env's GUID, size or offset. Single env copy: a torn
+  `saveenv` falls back to the default env and an extlinux boot.
+- New layout for the 4096-byte-sector module: env, bootfs (FAT), rootfs-a,
+  rootfs-b, data (f2fs). `/mnt/boot` is gone; Linux never mounts the
+  512-byte-BPB FAT bootfs.
+- fwup's GPT writer is 512-only, so modules are written with
+  `scripts/flash-ufs.sh` (`fwup -d file.img`, `tools/mk_ufs_image.py`, dd).
+  Do not `fwup -d`/`mix burn` straight to the module. `expand-data` is
+  unavailable; the image tool sizes `data` to the module. On-device OTA is
+  unchanged.
+- `complete` sets `a.nerves_fw_validated=1`; upgrade tasks clear the target
+  slot's flag so a stale `1` cannot hide an unvalidated upgrade.
+- The SD slot is unused. The `mmc0` alias half of the dts patch is now
+  legacy (harmless); the watchdog half is still required.
+- `fw_env.config` reads the env through `/dev/rootdisk0` at 1 MiB, the
+  device fwup writes it through, so the two never see different page
+  caches.
+- Removed the committed v0.1.x `uboot/u-boot-rockchip-spi.bin` (env on SD,
+  unable to find the UFS env, and named like the Buildroot-built image) and
+  its `scripts/build-uboot.sh`; both remain at tag v0.1.1.
+- Not yet verified on hardware: UFS probe at env-load time, the
+  GUID-based disk lookup, and NOR chip variants.
 
 Pin bumps:
 

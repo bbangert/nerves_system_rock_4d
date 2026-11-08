@@ -21,32 +21,32 @@ header pins 8/10/6 (see `rootfs_overlay/etc/erlinit.config`).
 
 In the diagram: 8 is the 40-pin header with the debug UART on pins 8
 (TX), 10 (RX), 6 (GND); 11 is the MASKROM button, used together with the
-upper USB 3.0 OTG port (14) for `rkdeveloptool`; 26 is the microSD slot
-that holds the Nerves firmware; 1 is the USB-C port, which is power only.
+upper USB 3.0 OTG port (14) for `rkdeveloptool`; the eMMC/UFS
+connector holds the UFS module with the Nerves firmware (the microSD slot,
+26, is unused); 1 is the USB-C port, which is power only.
 
 ## Boot architecture
 
-The board runs Nerves from the SD card, but the bootloader can't live
-there: the RK3576 boot ROM only loads its first-stage code from SPI NOR,
-UFS, or USB — not from SD. All standard boards ship with U-Boot in the
-onboard 16 MB SPI NOR, and that runs first at power-on. From there on,
-everything comes off the SD card: U-Boot reads the Nerves environment,
-kernel, and root filesystems from it.
+The RK3576 BootROM tries SPI NOR (FSPI0), then UFS, then USB maskrom; it
+never boots SD. U-Boot lives in the onboard 16 MB SPI NOR and runs first
+at power-on. Everything else is on the UFS module: the U-Boot
+environment, kernels, and root filesystems.
 
-A new board boots the Nerves SD as-is, because the factory bootloader
-does extlinux boot and the SD always carries a valid
-`extlinux/extlinux.conf`. The factory bootloader can't automatically
-revert unvalidated firmware, though; that logic is in this system's
-U-Boot. Flash it once over USB maskrom (a host-side `rkdeveloptool`
-step, see [uboot/README.md](uboot/README.md)). After that, firmware
-updates are normal Nerves A/B upgrades on the SD card and the bootloader
-doesn't need to be touched again.
+The module has 4096-byte logical sectors, which stock tooling does not
+expect. This system builds mainline U-Boot (v2027.01-rc1) in Buildroot
+with UFS/SCSI support, and ships a flashing path that writes a 4096-byte
+GPT (see "Flashing and upgrades"). Flash U-Boot to the NOR once over USB
+maskrom (a host-side `rkdeveloptool` step, see
+[uboot/README.md](uboot/README.md)); after that, firmware updates are
+normal Nerves A/B upgrades on the module and the bootloader doesn't need
+to be touched again. About 14.4 MiB of the NOR stays free.
 
 ## Hardware support
 
 | Feature | Status | Notes |
 | --- | --- | --- |
-| SD-card boot, A/B firmware slots | Yes | Still the boot medium on this branch. The fork's v0.2.0 replaces it with UFS-module boot (see UFS row) |
+| SD card | No | This fork boots from a UFS module; the SD slot is unused (the BootROM never boots SD) |
+| A/B firmware slots | Untested | On the UFS module; see the UFS row |
 | OTA updates (`mix upload`) | Yes | Delta updates supported (fwup >= 1.12 on device) |
 | Ethernet | Yes | Gigabit, gmac0 + RTL8211F |
 | WiFi (onboard) | Yes | Quectel FCU760K (AIC8800D80, USB) via the out-of-tree [radxa-pkg/aic8800](https://github.com/radxa-pkg/aic8800) driver in `package/aic8800`. Enumerates as `a69c:8d80`, re-enumerates as `8d81` after firmware upload, loads via modalias. USB WiFi dongles also work |
@@ -59,9 +59,9 @@ doesn't need to be touched again.
 | RTC | Yes | HYM8563; sets the clock at boot. Battery backup via the 2-pin socket on the board underside (CR2032 with a 1.25 mm-pitch plug lead, not a bare coin cell) |
 | USB hosts / gadget | Yes | 2x USB3 + 2x USB2; the OTG port does `usb0` gadget ethernet |
 | GPIO/I2C/SPI/PWM/UART/CAN header | Yes | Via [Circuits.*](https://elixir-circuits.github.io/); see the 40-pin summary below |
-| SPI NOR access | Yes | `loader` mtd + `flashcp` are included; copy `u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
+| SPI NOR access | Yes | `loader` mtd + `flashcp` are included; copy the build's `images/u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
 | PCIe / NVMe (FPC) | Untested | Enabled in the device tree; needs the M.2 HAT to verify |
-| UFS modules | **Planned** | v0.2.0: boot + A/B slots on a Radxa UFS module via mainline U-Boot in SPI NOR; not in this branch yet |
+| UFS modules | Untested | Implemented and build-proven, not yet run on hardware: boot + A/B slots on a Radxa UFS module (4096-byte sectors) via mainline U-Boot in SPI NOR |
 | NPU (6 TOPS) | Yes | RKNPU driver (0.9.8) + librknnrt 2.3.2 runtime and headers (`package/librknnrt`); build models on the host with rknn-toolkit2 |
 | MIPI DSI / CSI | No | Connectors unused; needs panel/camera bring-up |
 | Onboard WiFi in AP mode | Yes | VintageNetWiFi `mode: :ap` |
@@ -76,6 +76,7 @@ mix compile
 ```
 
 The result is a Nerves system artifact consumed by an application project.
+U-Boot (`images/u-boot-rockchip-spi.bin`) is built as part of the system.
 
 ### Using in an application
 
@@ -111,48 +112,73 @@ mix firmware
 One-time setup: flash U-Boot to the SPI NOR
 ([uboot/README.md](uboot/README.md)).
 
-To write the SD card, put it in a USB reader on the host and run:
+To write the UFS module, put it in a USB UFS reader on the host and run:
 
 ```sh
-mix burn                 # or: fwup -a -d /dev/rdiskN -t complete -i <firmware>.fw
+sudo scripts/flash-ufs.sh <firmware>.fw /dev/sdX
 ```
 
-(`brew install fwup` on macOS.) Routine SD flashing has no
-maskrom/rkdeveloptool step; the card is written directly on the host.
+The script builds the image (`fwup -d file.img`, then
+`tools/mk_ufs_image.py` to rewrite the GPT for 4096-byte sectors and grow
+`data` to fill the module), checks the target is a whole removable/USB
+disk with nothing mounted or swapped on it (including through LVM, dm or
+md), and writes it. It reads the module's exact size from the device,
+which matters: the backup GPT goes at the true end of the disk.
+
+**Never run `fwup -d /dev/sdX` or `mix burn` on the module.** fwup's GPT
+writer is 512-byte only; the result is a partition table U-Boot and Linux
+cannot read on a 4096-byte-sector LUN. `expand-data` is likewise not
+available.
 
 OTA upgrades use the standard Nerves flow (`mix upload`, or `fwup` over
-SSH). Upgrades write only the inactive slot. The new firmware boots
-unvalidated and U-Boot reverts to the previous slot unless the
-application validates it (`Nerves.Runtime.validate_firmware/0`).
+SSH) and work unchanged on-device, since upgrade tasks only do
+byte-addressed writes. Upgrades write only the inactive slot. The new
+firmware boots unvalidated and U-Boot reverts to the previous slot unless
+the application validates it (`Nerves.Runtime.validate_firmware/0`). A
+fresh `complete` flash is marked validated.
 
 ## Boot flow
 
 ```
 RK3576 boot ROM
   └─ SPI NOR: u-boot-rockchip-spi.bin  (TPL/DDR init + SPL @0, U-Boot FIT + BL31 @0x60000)
-      └─ bootcmd = run nerves_init nerves_boot   (env @ 15 MB on the SD card)
-          └─ Image.<slot> + rk3576-rock-4d.<slot>.dtb from p1 (FAT)
-              └─ squashfs rootfs on p2 (A) or p3 (B), root=PARTUUID=<slot GUID>
+      └─ env: first 128 KiB of GPT p1 on the UFS LUN, found by p1's unique GUID
+          └─ bootcmd = run nerves_init nerves_boot
+              └─ Image.<slot> + rk3576-rock-4d.<slot>.dtb from p2 (FAT)
+                  └─ squashfs rootfs on p3 (A) or p4 (B), root=PARTUUID=<slot GUID>
 ```
 
-U-Boot reads the Nerves environment block on the SD card (slot selection,
-validation flag, firmware metadata) and boots the active slot directly;
-unvalidated firmware reverts automatically. If the nerves boot path or the
-environment is broken, `bootflow scan` boots `extlinux/extlinux.conf` from
-the FAT partition instead. U-Boot build details and provenance:
-`uboot/README.md`.
+U-Boot locates the Nerves environment block by p1's GUID
+(`CONFIG_ENV_IS_IN_SCSI`; `scripts/check-env-config.sh` fails the build if
+fwup and U-Boot disagree on it), then boots the active slot directly from
+the SCSI device whose p1 carries that GUID. The
+env holds slot selection, the validation flag, and firmware metadata.
+Unvalidated firmware reverts automatically: new firmware boots once, and
+if the next boot still sees it unvalidated, U-Boot boots the other slot.
+The env is a single copy, so a torn `saveenv` yields the default
+environment and an extlinux boot without revert on that boot. If the
+nerves boot path or the environment is broken, `bootflow scan` boots
+`extlinux/extlinux.conf` from the FAT partition instead; that scan only
+finds it because bootfs is the only partition marked bootable (GPT
+legacy-BIOS-bootable attribute). U-Boot build
+details and provenance: `uboot/README.md`.
 
-### SD card layout
+Linux never mounts the bootfs: it is a 512-byte-BPB FAT (all fwup can
+make) on a 4096-byte-sector LUN, so only U-Boot and fwup touch it and
+there is no `/mnt/boot`.
 
-| Region            | Offset (512 B sectors) | Size    | Contents                          |
-| ----------------- | ---------------------- | ------- | --------------------------------- |
-| GPT               | 0                      | 32 KB   |                                   |
-| (unallocated)     | 64                     | ~15 MB  | Nothing (no bootloader on SD)     |
-| Nerves U-Boot env | 30720 (15 MB)          | 128 KB  | Firmware metadata (fw_env.config) |
-| p1 `bootfs` (FAT) | 32768 (16 MB)          | 256 MB  | Image.a/b, dtb, extlinux          |
-| p2 `rootfs_a`     |                        | 512 MB  | squashfs                          |
-| p3 `rootfs_b`     |                        | 512 MB  | squashfs                          |
-| p4 `app` (f2fs)   |                        | expands | Application data (`/root`)        |
+### UFS module layout
+
+GPT at LBA 1 (4096-byte LBAs; LBA 0 is the protective MBR, entries occupy
+LBA 2-5); the backup GPT sits at the end of the module.
+
+| Partition         | Start LBA | Byte offset | Size       | Contents                         |
+| ----------------- | --------- | ----------- | ---------- | -------------------------------- |
+| p1 `env`          | 256       | 1 MiB       | 1 MiB      | Nerves U-Boot env, first 128 KiB |
+| p2 `bootfs` (FAT) | 4096      | 16 MiB      | 256 MiB    | Image.a/b, dtb, extlinux         |
+| p3 `rootfs-a`     | 69632     | 272 MiB     | 512 MiB    | squashfs                         |
+| p4 `rootfs-b`     | 200704    | 784 MiB     | 512 MiB    | squashfs                         |
+| p5 `data` (f2fs)  | 331776    | 1296 MiB    | to the end | Application data (`/root`); sized by the image tool |
 
 ## Kernel
 
@@ -161,11 +187,11 @@ branch `rk-6.1-rkr7.2` (6.1.172; Rockchip BSP 6.1 + upstream-stable merges + Arm
 fixes), pinned by commit SHA in `nerves_defconfig` and fetched by Buildroot
 as a GitHub archive. Radxa's ROCK 4D device tree (`rk3576-rock-4d-spi`)
 is already in this tree. The only board patch is `linux/0001`, which
-fixes two things: it enables the watchdog node (shipped disabled;
+does two things: it enables the watchdog node (shipped disabled;
 `nerves_heart` requires `/dev/watchdog0`) and re-points the `mmc0` alias
-at the SD card. The vendor dtsi aliases mmc0 to the disabled eMMC and
-the kernel numbers `mmcblk` devices by alias, so without the patch the
-SD card is `/dev/mmcblk1` and the env, boot, and app-data mounts fail.
+at the SD card. Only the watchdog half matters for UFS boot; the alias
+half dates from SD boot (it made the SD card `/dev/mmcblk0`) and is
+harmless here, as nothing uses the SD card.
 
 The configuration is the in-tree `rockchip_linux_defconfig` plus two
 fragments: `linux/rk3576.config` (Mali Bifrost; rkr7.2 no longer enables it in the defconfig) and `linux/nerves.config`
@@ -186,8 +212,8 @@ the vendor code this system carries.
 | SoC | Rockchip RK3576 (RK3576J on industrial SKUs), 4×Cortex-A72 @ 2.2 GHz + 4×Cortex-A53 @ 2.0 GHz | RK806 PMIC (i2c 0x23) |
 | RAM | LPDDR5, 2/4/8/16 GB SKUs | DDR init blob handles LP4/LP5 |
 | Boot flash | 16 MB SPI NOR on sfc0 | mtd `loader`; holds U-Boot |
-| microSD | sdmmc, UHS-I SDR104 | The Nerves system disk (`/dev/mmcblk0`) |
-| eMMC/UFS connector | UFS modules 64 GB–1 TB | eMMC modules unsupported on SPI-NOR (standard) SKUs |
+| microSD | sdmmc, UHS-I SDR104 | Unused by this fork |
+| eMMC/UFS connector | UFS modules 64 GB–1 TB | The Nerves system disk (4096-byte sectors); eMMC modules unsupported on SPI-NOR (standard) SKUs |
 | Ethernet | GbE, gmac0 + Realtek RTL8211F (RGMII) | PoE via the optional PoE+ HAT |
 | WiFi/BT | Quectel FCU760K (AIC8800D80, USB a69c:8d80→8d81), WiFi 6 + BT 5.4, external antennas | package/aic8800 driver; wlan0 + hci0 |
 | Display | HDMI 2.1 up to 4K@120 (VOP + Samsung HDPTX PHY) | fbcon on by default; app takes over DRM |

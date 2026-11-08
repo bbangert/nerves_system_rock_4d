@@ -16,6 +16,9 @@ Two board-dts changes needed by the Nerves system:
    enables it. Nerves arms the hardware watchdog through Erlang's
    heart (nerves_heart on /dev/watchdog0 with WATCHDOG_NOWAYOUT).
 
+With UFS boot only the watchdog change (2) is needed; the mmc0 alias
+change (1) is legacy from SD boot and harmless.
+
 Applies to both rk3576-rock-4d and rk3576-rock-4d-spi (the -spi dts
 includes this file).
 
