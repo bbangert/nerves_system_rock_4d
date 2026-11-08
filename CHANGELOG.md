@@ -28,8 +28,11 @@ UFS boot:
   Do not `fwup -d`/`mix burn` straight to the module. `expand-data` is
   unavailable; the image tool sizes `data` to the module. On-device OTA is
   unchanged.
-- `complete` sets `a.nerves_fw_validated=1`; upgrade tasks clear the target
-  slot's flag so a stale `1` cannot hide an unvalidated upgrade.
+- The global `nerves_fw_validated` is the only validation flag. U-Boot
+  reverts on it and fwup-ops `validate` sets it. `complete` no longer writes
+  `a.nerves_fw_validated`, and upgrade tasks clear both slots' per-slot copies.
+  nerves_runtime reads a per-slot flag before the global one, so with a mix of
+  the two, `firmware_valid?/0` could disagree with what U-Boot reverts on.
 - The SD slot is unused. The `mmc0` alias half of the dts patch is now
   legacy (harmless); the watchdog half is still required.
 - `fw_env.config` reads the env through `/dev/rootdisk0` at 1 MiB, the
