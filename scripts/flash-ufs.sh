@@ -15,7 +15,8 @@ for a in "$@"; do
 done
 [ "${#args[@]}" -eq 2 ] || usage
 fw=${args[0]}
-dev=${args[1]}
+# Canonical /dev/sdX so by-id paths match /sys/block and /proc/self/mounts.
+dev=$(readlink -f "${args[1]}")
 
 [ -f "$fw" ] || die "$fw is not a file"
 [ -b "$dev" ] || die "$dev is not a block device"
@@ -40,9 +41,14 @@ if [ "$removable" != 1 ] && [ "$usb" != 1 ]; then
   die "$dev is neither removable nor USB-attached; refusing"
 fi
 
-if lsblk -nro MOUNTPOINTS "$dev" | grep -q .; then
-  die "$dev (or one of its partitions) is mounted"
-fi
+# /proc/self/mounts rather than lsblk MOUNTPOINTS (util-linux >= 2.37), whose
+# failure inside this `if` would silently pass the guard.
+while read -r src mnt _; do
+  src=$(readlink -f "$src" 2>/dev/null || echo "$src")
+  case $src in
+    "$dev" | "$dev"[0-9]* | "$dev"p[0-9]*) die "$dev (or one of its partitions) is mounted at $mnt" ;;
+  esac
+done </proc/self/mounts
 
 root_src=$(findmnt -nro SOURCE / || true)
 if [ -n "$root_src" ]; then

@@ -142,15 +142,16 @@ fresh `complete` flash is marked validated.
 ```
 RK3576 boot ROM
   └─ SPI NOR: u-boot-rockchip-spi.bin  (TPL/DDR init + SPL @0, U-Boot FIT + BL31 @0x60000)
-      └─ env: first 128 KiB of GPT p1 on the UFS LUN (scsi 0), found by p1's unique GUID
+      └─ env: first 128 KiB of GPT p1 on the UFS LUN, found by p1's unique GUID
           └─ bootcmd = run nerves_init nerves_boot
               └─ Image.<slot> + rk3576-rock-4d.<slot>.dtb from p2 (FAT)
                   └─ squashfs rootfs on p3 (A) or p4 (B), root=PARTUUID=<slot GUID>
 ```
 
 U-Boot locates the Nerves environment block by p1's GUID
-(`CONFIG_ENV_IS_IN_SCSI`; `scripts/check-env-uuid.sh` fails the build if
-fwup and U-Boot disagree on it), then boots the active slot directly. The
+(`CONFIG_ENV_IS_IN_SCSI`; `scripts/check-env-config.sh` fails the build if
+fwup and U-Boot disagree on it), then boots the active slot directly from
+the SCSI device whose p1 carries that GUID. The
 env holds slot selection, the validation flag, and firmware metadata.
 Unvalidated firmware reverts automatically: new firmware boots once, and
 if the next boot still sees it unvalidated, U-Boot boots the other slot.

@@ -23,23 +23,20 @@ DDR-init TPL and BL31 from `rkbin/` (provenance and hashes in
 - `ENV_IS_IN_SCSI` with `ENV_SCSI_PART_UUID`: U-Boot reads the env from the
   start of the GPT partition whose **unique** GUID matches. That GUID is
   `UBOOT_ENV_PART_GUID` in `fwup_include/fwup-common.conf`, p1's `guid`.
-  The two must be identical; `scripts/check-env-uuid.sh` runs from
+  `nerves_env_uuid` in `uboot.env` repeats it for the kernel loads. All
+  three must be identical; `scripts/check-env-config.sh` runs from
   `post-build.sh` and fails the build if they are not. To change it, edit
-  both.
-- `ENV_SIZE=0x20000`, which must equal `UBOOT_ENV_COUNT` × 512 and the
-  `uboot-env.bin` size (both sides CRC `size - 4` bytes).
+  all three.
+- `ENV_SIZE=0x20000`, which must equal `UBOOT_ENV_COUNT` × 512, the
+  `uboot-env.bin` size and the `fw_env.config` size (all CRC `size - 4`
+  bytes); `check-env-config.sh` enforces this too.
 - `FS_FAT_HANDLE_SECTOR_SIZE_MISMATCH`: fwup can only make a 512-byte-BPB
   FAT, and U-Boot otherwise refuses it on the 4096-byte-sector LUN.
 - SPI NOR vendor drivers (XMC, Macronix, GigaDevice, Winbond): the NOR part
   differs between board revisions.
 
-The committed `uboot/u-boot-rockchip-spi.bin` is the previous v2026.01
-blob from v0.1.x, kept only until the Buildroot-built image is proven on
-hardware. Do NOT flash it with this layout: its env lives at 0xF00000 on
-mmc, so it would never find the UFS env.
-
-`scripts/build-uboot.sh` is the legacy Docker recipe for the committed
-v0.1.x `u-boot-rockchip-spi.bin` (v2026.01, env on SD). It is not used.
+The v0.1.x prebuilt image (env on SD) and its Docker build script live in
+git history at tag v0.1.1.
 
 Licensing: U-Boot is GPL-2.0-or-later (corresponding source: the pinned
 tag at https://github.com/u-boot/u-boot). The DDR-init and BL31 components
@@ -51,8 +48,10 @@ redistributable per `rkbin/LICENSE` (= `LICENSES/LICENSE.rockchip-rkbin`).
 ## Boot and automatic revert
 
 U-Boot loads the env from p1 (the lookup runs `scsi scan`), then runs
-`nerves_init`/`nerves_boot`: it loads the active slot's `Image.<slot>` and
-dtb from the FAT bootfs (`scsi 0:2`) and boots them directly
+`nerves_init`/`nerves_boot`: `nerves_find_disk` picks the SCSI device
+whose p1 has `nerves_env_uuid` (default 0), then it loads the active
+slot's `Image.<slot>` and dtb from that device's FAT bootfs (p2) and boots
+them directly
 (`root=PARTUUID=<slot GUID>`). Automatic revert follows the standard Nerves
 model:
 
@@ -72,8 +71,10 @@ torn `saveenv` costs the revert on that one boot.
 ## uboot.env: the shared firmware/boot environment
 
 `uboot.env` is compiled into `uboot-env.bin` and written at the start of p1
-(`UBOOT_ENV_OFFSET`, see `fwup_include/fwup-common.conf` and
-`rootfs_overlay/etc/fw_env.config`). It is a single fw_env block shared by
+(`UBOOT_ENV_OFFSET`, see `fwup_include/fwup-common.conf`).
+`rootfs_overlay/etc/fw_env.config` reads it through the whole disk at
+1 MiB, the same device fwup writes, because Linux caches `sda` and `sda1`
+separately and a read through p1 could miss fwup's write. It is a single fw_env block shared by
 three parties: U-Boot reads it to pick the boot slot, `nerves_runtime`/
 `fwup` read and write the `nerves_fw_*` firmware metadata, and `boardid`
 reads the serial number.

@@ -1,7 +1,7 @@
 # Env lives at the start of GPT p1 on the UFS LUN. env/scsi.c finds it by the
 # partition's UNIQUE GUID (not its type or name), so ENV_SCSI_PART_UUID must
 # equal UBOOT_ENV_PART_GUID in fwup_include/fwup-common.conf;
-# scripts/check-env-uuid.sh fails the build if they drift. Without a UUID it
+# scripts/check-env-config.sh fails the build if they drift. Without a UUID it
 # falls back to "scsi 0", which can resolve to the whole disk and put the env
 # over the GPT.
 CONFIG_ENV_IS_IN_SCSI=y

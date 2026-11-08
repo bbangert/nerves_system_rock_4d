@@ -10,12 +10,13 @@ The on-device expand-data task does 512-byte LBA math and must not run on a
 4Kn disk, so generation-time sizing replaces it.
 
 Usage:
-    mk_ufs_image.py --input fwup.img --disk-bytes 128G --out ufs
+    mk_ufs_image.py --input fwup.img --disk-bytes $(blockdev --getsize64 /dev/sdX) --out ufs
     mk_ufs_image.py --input fwup.img --disk-bytes 137438953472 --out ufs --full
 
---disk-bytes must be the module's exact size (`blockdev --getsize64 /dev/sdX`);
-the backup GPT lands at the true end of the disk, so an approximate figure
-would put it somewhere the firmware never looks. The USB reader's reported
+--disk-bytes must be the device's exact byte count; K/M/G/T suffixes are
+binary (128G is 128 GiB, more than a "128 GB" module holds). The backup
+GPT lands at the true end of the disk, so an approximate figure would put
+it somewhere the firmware never looks. The USB reader's reported
 logical sector size (`blockdev --getss`) is irrelevant: the image is a byte
 stream with the GPT at byte 4096 regardless of how the reader presents it.
 

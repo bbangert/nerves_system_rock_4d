@@ -14,8 +14,11 @@ UFS boot:
   TPL and BL31 blobs committed under `uboot/rkbin/`. Flashed once to the
   SPI NOR over maskrom; about 14.4 MiB of the NOR stays free.
 - The U-Boot env is the first 128 KiB of GPT p1 (`env`), found by p1's
-  unique GUID (`CONFIG_ENV_IS_IN_SCSI`). `scripts/check-env-uuid.sh` fails
-  the build if fwup and the U-Boot fragment drift. Single env copy: a torn
+  unique GUID (`CONFIG_ENV_IS_IN_SCSI`), and the kernel loads use the SCSI
+  device whose p1 has that GUID rather than assuming `scsi 0`.
+  `scripts/check-env-config.sh` fails the build if fwup, the U-Boot
+  fragment, `uboot.env`, the env image size and `fw_env.config` disagree on
+  the env's GUID, size or offset. Single env copy: a torn
   `saveenv` falls back to the default env and an extlinux boot.
 - New layout for the 4096-byte-sector module: env, bootfs (FAT), rootfs-a,
   rootfs-b, data (f2fs). `/mnt/boot` is gone; Linux never mounts the
@@ -29,8 +32,14 @@ UFS boot:
   slot's flag so a stale `1` cannot hide an unvalidated upgrade.
 - The SD slot is unused. The `mmc0` alias half of the dts patch is now
   legacy (harmless); the watchdog half is still required.
-- Not yet verified on hardware: `scsi 0` being the user LUN, UFS probe at
-  env-load time, and NOR chip variants.
+- `fw_env.config` reads the env through `/dev/rootdisk0` at 1 MiB, the
+  device fwup writes it through, so the two never see different page
+  caches.
+- Removed the committed v0.1.x `uboot/u-boot-rockchip-spi.bin` (env on SD,
+  unable to find the UFS env, and named like the Buildroot-built image) and
+  its `scripts/build-uboot.sh`; both remain at tag v0.1.1.
+- Not yet verified on hardware: UFS probe at env-load time, the
+  GUID-based disk lookup, and NOR chip variants.
 
 Pin bumps:
 

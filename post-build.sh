@@ -2,7 +2,7 @@
 
 set -e
 
-$NERVES_DEFCONFIG_DIR/scripts/check-env-uuid.sh $NERVES_DEFCONFIG_DIR
+$NERVES_DEFCONFIG_DIR/scripts/check-env-config.sh $NERVES_DEFCONFIG_DIR
 
 # Create the fwup ops script for on-device firmware operations (revert,
 # validate, factory-reset, status)
