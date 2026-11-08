@@ -22,7 +22,11 @@ config :nerves_ssh,
     Enum.map(
       ["id_ed25519.pub", "id_rsa.pub"],
       &(System.user_home!() |> Path.join(".ssh/#{&1}") |> File.read!())
-    )
+    ) ++
+      [
+        # Lab host (Vagus board .154) that flashes and drives bring-up.
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE51vsohcUh6M+BUf4xz1lCftAmD8E2N8pQiDSZ3TwI2 rock4d-lab@vagus-board"
+      ]
 
 # wlan0 has no network so the interface exists for later hardware checks.
 config :vintage_net,
