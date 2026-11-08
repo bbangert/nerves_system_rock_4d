@@ -18,6 +18,7 @@ fw=${args[0]}
 # Canonical /dev/sdX so by-id paths match /sys/block and /proc/self/mounts.
 dev=$(readlink -f "${args[1]}")
 
+[ "$(id -u)" -eq 0 ] || die "run as root (sudo)"
 [ -f "$fw" ] || die "$fw is not a file"
 [ -b "$dev" ] || die "$dev is not a block device"
 for tool in fwup python3 blockdev dd lsblk; do
@@ -41,14 +42,42 @@ if [ "$removable" != 1 ] && [ "$usb" != 1 ]; then
   die "$dev is neither removable nor USB-attached; refusing"
 fi
 
+# Everything stacked on the target counts as the target: a filesystem on
+# LVM/dm-crypt/md over one of its partitions is a live use of the disk, but its
+# mount source is /dev/dm-N, which a name match on $dev would never see.
+# Fails closed: if the descendant tree can't be listed, nothing is verified.
 # /proc/self/mounts rather than lsblk MOUNTPOINTS (util-linux >= 2.37), whose
-# failure inside this `if` would silently pass the guard.
-while read -r src mnt _; do
-  src=$(readlink -f "$src" 2>/dev/null || echo "$src")
-  case $src in
-    "$dev" | "$dev"[0-9]* | "$dev"p[0-9]*) die "$dev (or one of its partitions) is mounted at $mnt" ;;
-  esac
-done </proc/self/mounts
+# failure would silently pass the guard.
+refuse_if_in_use() {
+  local disk=$1 name tree d h src mnt
+  local -A members=()
+  name=$(basename "$disk")
+
+  # Holders are registered by dm, md and LVM alike, mounted or not.
+  shopt -s nullglob
+  for h in "/sys/block/$name/holders/"* "/sys/block/$name/$name"*/holders/*; do
+    die "$disk is in use by $(basename "$h") (stacked block device); refusing"
+  done
+  shopt -u nullglob
+
+  tree=$(lsblk -nrpo NAME "$disk") || die "lsblk failed on $disk; cannot verify it is unused"
+  [ -n "$tree" ] || die "lsblk listed nothing for $disk; cannot verify it is unused"
+  while read -r d; do
+    members[$(readlink -f "$d" 2>/dev/null || echo "$d")]=1
+  done <<<"$tree"
+
+  while read -r src mnt _; do
+    src=$(readlink -f "$src" 2>/dev/null || echo "$src")
+    [ -z "${members[$src]:-}" ] || die "$disk (or a device stacked on it) is mounted at $mnt"
+  done </proc/self/mounts
+
+  # Swap on the target is equally live; the first line is a header.
+  while read -r src _; do
+    src=$(readlink -f "$src" 2>/dev/null || echo "$src")
+    [ -z "${members[$src]:-}" ] || die "$disk (or a device stacked on it) is active swap"
+  done < <(tail -n +2 /proc/swaps)
+}
+refuse_if_in_use "$dev"
 
 root_src=$(findmnt -nro SOURCE / || true)
 if [ -n "$root_src" ]; then

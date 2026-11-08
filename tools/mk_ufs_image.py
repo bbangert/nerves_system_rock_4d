@@ -30,6 +30,7 @@ Default output:
 
 import argparse
 import binascii
+import os
 import re
 import struct
 import sys
@@ -463,6 +464,16 @@ def main() -> int:
     except GptError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
+
+    # "wb" truncates before the source is read; realpath covers symlinks,
+    # samefile covers hard links (only checkable once the output exists).
+    in_real = os.path.realpath(args.input)
+    for out in (f"{args.out}.img", f"{args.out}-backup-gpt.bin", f"{args.out}-full.img"):
+        if os.path.realpath(out) == in_real or (
+            os.path.exists(out) and os.path.samefile(out, args.input)
+        ):
+            print(f"error: output {out} is the same file as --input", file=sys.stderr)
+            return 1
 
     blank = (stale_start, stale_end)
     out_path = f"{args.out}-full.img" if args.full else f"{args.out}.img"

@@ -115,15 +115,15 @@ One-time setup: flash U-Boot to the SPI NOR
 To write the UFS module, put it in a USB UFS reader on the host and run:
 
 ```sh
-sudo blockdev --getsize64 /dev/sdX   # the module's exact size in bytes
-scripts/flash-ufs.sh <firmware>.fw /dev/sdX
+sudo scripts/flash-ufs.sh <firmware>.fw /dev/sdX
 ```
 
 The script builds the image (`fwup -d file.img`, then
 `tools/mk_ufs_image.py` to rewrite the GPT for 4096-byte sectors and grow
 `data` to fill the module), checks the target is a whole removable/USB
-disk, and writes it. The module's exact size matters: the backup GPT goes
-at the true end of the disk.
+disk with nothing mounted or swapped on it (including through LVM, dm or
+md), and writes it. It reads the module's exact size from the device,
+which matters: the backup GPT goes at the true end of the disk.
 
 **Never run `fwup -d /dev/sdX` or `mix burn` on the module.** fwup's GPT
 writer is 512-byte only; the result is a partition table U-Boot and Linux

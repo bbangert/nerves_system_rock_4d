@@ -6,6 +6,7 @@ so a bug in the tool's own parser cannot make its output look valid.
 """
 
 import binascii
+import hashlib
 import os
 import struct
 import subprocess
@@ -131,27 +132,36 @@ class ToolOutput(unittest.TestCase):
         r = run_tool("--input", cls.src, "--disk-bytes", str(DISK), "--out", cls.base)
         assert r.returncode == 0, r.stderr
         cls.stdout = r.stdout
-        with open(cls.base + ".img", "rb") as f:
-            cls.img = f.read()
+        cls.img_path = cls.base + ".img"
         with open(cls.base + "-backup-gpt.bin", "rb") as f:
             cls.backup = f.read()
         cls.S = DISK // SS
 
+    def img_at(self, offset, length):
+        # The image is ~1.8 GiB; read only the range an assertion needs.
+        with open(self.img_path, "rb") as f:
+            f.seek(offset)
+            return f.read(length)
+
+    def front_gpt(self):
+        front = self.img_at(0, 6 * SS)
+        return read_gpt(front[SS : SS + 92], front[2 * SS : 6 * SS])
+
     def test_primary_header_at_4096(self):
-        h = self.img[SS : SS + 92]
-        g = read_gpt(h, self.img[2 * SS : 2 * SS + 16384])
+        front = self.img_at(0, 6 * SS)
+        g = read_gpt(front[SS : SS + 92], front[2 * SS : 2 * SS + 16384])
         self.assertEqual(g["cur"], 1)
         self.assertEqual(g["alt"], self.S - 1)
         self.assertEqual(g["ent_lba"], 2)
         self.assertEqual(g["first"], 6)
         self.assertEqual(g["disk_guid"], self.disk_guid)
-        self.assertEqual(self.img[510:512], b"\x55\xaa")
-        self.assertEqual(self.img[450], 0xEE)
+        self.assertEqual(front[510:512], b"\x55\xaa")
+        self.assertEqual(front[450], 0xEE)
 
     def test_backup_gpt_and_cross_references(self):
         self.assertEqual(len(self.backup), 5 * SS)
         b = read_gpt(self.backup[4 * SS : 4 * SS + 92], self.backup[: 4 * SS])
-        p = read_gpt(self.img[SS : SS + 92], self.img[2 * SS : 6 * SS])
+        p = self.front_gpt()
         self.assertEqual(b["cur"], self.S - 1)
         self.assertEqual(b["alt"], p["cur"])
         self.assertEqual(p["alt"], b["cur"])
@@ -161,7 +171,7 @@ class ToolOutput(unittest.TestCase):
         self.assertIn(f"byte {DISK - 5 * SS}", self.stdout)
 
     def test_partitions_preserved(self):
-        p = read_gpt(self.img[SS : SS + 92], self.img[2 * SS : 6 * SS])["parts"]
+        p = self.front_gpt()["parts"]
         self.assertEqual(list(p), [n for n, _, _ in LAYOUT])
         for slot, (name, start, count) in enumerate(LAYOUT):
             self.assertEqual(p[name]["first"] * SS, start * 512, name)
@@ -173,7 +183,7 @@ class ToolOutput(unittest.TestCase):
             self.assertEqual((p[name]["last"] + 1) * SS, (start + count) * 512, name)
 
     def test_data_grown_to_last_usable(self):
-        g = read_gpt(self.img[SS : SS + 92], self.img[2 * SS : 6 * SS])
+        g = self.front_gpt()
         self.assertEqual(g["last"], self.S - 6)
         self.assertEqual(g["parts"]["data"]["last"], self.S - 6)
         self.assertEqual(g["parts"]["data"]["first"], 2654208 // 8)
@@ -181,13 +191,14 @@ class ToolOutput(unittest.TestCase):
     def test_markers_at_partition_starts(self):
         for name, start, _ in LAYOUT:
             at = start * 512
-            self.assertEqual(self.img[at : at + 5 + len(name)], b"MARK-" + name.encode())
+            self.assertEqual(self.img_at(at, 5 + len(name)), b"MARK-" + name.encode())
 
     def test_length_and_stale_backup_zeroed(self):
-        self.assertEqual(len(self.img), self.src_len)
-        self.assertEqual(len(self.img) % SS, 0)
+        size = os.path.getsize(self.img_path)
+        self.assertEqual(size, self.src_len)
+        self.assertEqual(size % SS, 0)
         end = max(s + c for _, s, c in LAYOUT)
-        stale = self.img[(end + 1) * 512 : (end + 34) * 512]
+        stale = self.img_at((end + 1) * 512, 33 * 512)
         self.assertEqual(stale, bytes(len(stale)))
 
     def test_full_mode(self):
@@ -197,7 +208,7 @@ class ToolOutput(unittest.TestCase):
         path = base + "-full.img"
         self.assertEqual(os.path.getsize(path), DISK)
         with open(path, "rb") as f:
-            self.assertEqual(f.read(6 * SS), self.img[: 6 * SS])
+            self.assertEqual(f.read(6 * SS), self.img_at(0, 6 * SS))
             f.seek(DISK - 5 * SS)
             self.assertEqual(f.read(), self.backup)
             at = LAYOUT[3][1] * 512
@@ -270,6 +281,44 @@ class Rejections(unittest.TestCase):
         with open(self.src, "wb") as f:
             f.write(bytes(MIB))
         self.rejected(msg="MBR")
+
+
+class OutputAliasesInput(unittest.TestCase):
+    def setUp(self):
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        self.dir = td.name
+        self.src = os.path.join(td.name, "fwup.img")
+        make_source(self.src)
+        self.before = self.digest()
+
+    def digest(self):
+        h = hashlib.sha256()
+        with open(self.src, "rb") as f:
+            while chunk := f.read(MIB):
+                h.update(chunk)
+        return h.hexdigest()
+
+    def assert_refused(self, out, *extra):
+        r = run_tool("--input", self.src, "--disk-bytes", str(DISK), "--out", out, *extra)
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.assertIn("same file as --input", r.stderr)
+        self.assertEqual(self.digest(), self.before)
+
+    def test_same_path(self):
+        self.assert_refused(self.src[: -len(".img")])
+
+    def test_symlink_to_input(self):
+        os.symlink(self.src, os.path.join(self.dir, "ln.img"))
+        self.assert_refused(os.path.join(self.dir, "ln"))
+
+    def test_hard_link_to_input(self):
+        os.link(self.src, os.path.join(self.dir, "hl.img"))
+        self.assert_refused(os.path.join(self.dir, "hl"))
+
+    def test_full_mode_target(self):
+        os.link(self.src, os.path.join(self.dir, "hf-full.img"))
+        self.assert_refused(os.path.join(self.dir, "hf"), "--full")
 
 
 if __name__ == "__main__":
