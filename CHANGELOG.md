@@ -24,8 +24,11 @@
   U-Boot but its kernel never started unless limited to the low 2.75 GB
   (`mem=2816M`). On v1.13 it boots with all 6 GB (System RAM
   0x4020_0000–0x1_BFFF_FFFF) and passes memtester over 4 GB with no reset.
-  Firmware upgrades never touch SPI NOR, so existing boards get this only by
-  reflashing `u-boot-rockchip-spi.bin` over maskrom.
+  Firmware upgrades never touch SPI NOR, so existing boards need
+  `u-boot-rockchip-spi.bin` reflashed: from Linux with `flashcp` to the
+  `loader` mtd, or over maskrom with the UFS module removed (see
+  `uboot/README.md`). A 6 GB board still on v1.12 reaches Linux only with
+  `mem=2816M` in the U-Boot env `cmdline`.
 - Docs: remove the UFS module before a maskrom NOR flash. The loader
   re-provisions and erases a seated module.
 
