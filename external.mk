@@ -1,2 +1,3 @@
-# Include system-specific packages
-include $(sort $(wildcard $(NERVES_DEFCONFIG_DIR)/package/*/*.mk))
+# Self-locating so this file works both standalone and vendored under <product>/base/.
+NERVES_BASE_DIR := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
+include $(sort $(wildcard $(NERVES_BASE_DIR)/package/*/*.mk))
