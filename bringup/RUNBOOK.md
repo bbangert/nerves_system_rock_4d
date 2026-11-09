@@ -27,6 +27,12 @@ mix deps.get && mix firmware   # -> _build/rock_4d_dev/nerves/images/rock4d_brin
 
 ## 1. SPI NOR (one time, maskrom)
 
+> **Remove the UFS module before maskrom** (or keep it in the USB reader).
+> Rockchip's loader (`rk3576_spl_loader_v1.09.108.bin` + `cs 9`) re-provisions
+> and erases a seated UFS module: on a 128 GB module LUN0 grew by 48 MiB (the
+> boot LUNs folded in) with an empty GPT and zeroed env and data. Reflash the
+> module with `scripts/flash-ufs.sh` afterwards if it was seated.
+
 Hold MASKROM and connect the upper USB 3.0 Type-A port (README item 14) to a
 Linux host with `rkdeveloptool`, using an A-to-A cable. USB-C is power only.
 After `db` the device re-enumerates with a new USB device number, so a
