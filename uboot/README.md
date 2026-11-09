@@ -143,10 +143,21 @@ the NOR is the `loader` MTD partition of the `-spi` device tree, and
 `flashcp -v <image> /dev/mtd0` is the manual equivalent.
 
 A 6 GB board still on the v1.12 DDR blob boots Linux only with its RAM
-capped. To move it to v1.13 without maskrom: from a reader or another board,
-`fw_setenv cmdline mem=2816M` on its module (or set it on the board from a
-previous boot), boot, run `rock4d-bootloader update --yes`, then
-`fw_setenv cmdline ""` and reboot into the full 6 GB.
+capped. To move it to v1.13 without maskrom:
+
+1. Put its UFS module in a USB reader on a Linux host. The plain
+   `fw_setenv` uses this system's `/etc/fw_env.config` (`/dev/rootdisk0`),
+   so point it at the module explicitly; the env is 128 KiB at byte offset
+   1 MiB of the whole disk:
+
+   ```sh
+   echo "/dev/sdX 0x100000 0x20000" > reader-fw_env.config
+   fw_setenv -c reader-fw_env.config cmdline mem=2816M
+   ```
+
+2. Put the module back, boot the board, and run
+   `rock4d-bootloader update --yes`.
+3. On the board, `fw_setenv cmdline ""` and reboot into the full 6 GB.
 
 Serial console for watching the boot: UART0 on the 40-pin header, pin 8
 (TX), pin 10 (RX), pin 6 (GND), 1500000 8N1, no flow control.

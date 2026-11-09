@@ -31,8 +31,12 @@ read_nor() {
     dd if="/dev/$mtd" of="$1" bs=512 count=$((size / 512)) 2>/dev/null || die "can't read /dev/$mtd"
 }
 
-nor=/tmp/rock4d-nor.bin
-trap 'rm -f "$nor"' EXIT
+# mkdir fails on any existing path, so a planted /tmp symlink can't
+# redirect the root-run dd, and concurrent runs don't share files.
+tmp=/tmp/rock4d-bootloader.$$
+mkdir -m 700 "$tmp" || die "can't create $tmp"
+trap 'rm -rf "$tmp"' EXIT
+nor=$tmp/nor.bin
 
 case "$1" in
 status)
