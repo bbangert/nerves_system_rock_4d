@@ -12,7 +12,7 @@ card only carries the Nerves environment, kernels and root filesystems:
 
 The committed `u-boot-rockchip-spi.bin` is mainline U-Boot v2026.01
 (`rock-4d-rk3576_defconfig`, added upstream in October 2025) plus the
-Rockchip rkbin blobs (RK3576 DDR init v1.12, BL31 v1.24 — there is no
+Rockchip rkbin blobs (RK3576 DDR init v1.13, BL31 v1.24 — there is no
 open-source DRAM init or BL31 for this SoC), with the Nerves environment
 support added:
 `CONFIG_ENV_IS_IN_MMC=y`, `CONFIG_ENV_OFFSET=0xF00000`,
@@ -68,6 +68,11 @@ SD on the factory bootloader, minus the Nerves env integration: no
 automatic revert of unvalidated firmware (upgrades still switch slots via
 the extlinux.conf swap). That is fine for bench work; flash ours when you
 want the full boot chain.
+
+> **Remove any UFS module first.** The maskrom loader
+> (`rk3576_spl_loader_v1.09.108.bin` with `cs 9`) also re-provisions a
+> seated UFS module and erases it (seen on a 128 GB module: LUN0 grew by
+> 48 MiB, empty GPT, zeroed data).
 
 Flashing is done over USB from the host — no OS on the board involved.
 Hold the MASKROM button while applying power. The maskrom USB device

@@ -24,8 +24,10 @@
 set -e
 
 UBOOT_VERSION="v2026.01"
-RKBIN_COMMIT="ecb4fcbe954edf38b3ae037d5de6d9f5bccf81f4"
-DDR_BIN="bin/rk35/rk3576_ddr_lp4_2112MHz_lp5_2736MHz_v1.12.bin"
+# DDR v1.13: v1.12 mis-handles the 6 GB parts (row_3_4, second chip-select
+# high), whose kernel then dies unless limited to the low 2.75 GB.
+RKBIN_COMMIT="14ece058efc139853642663800d86ed468923115"
+DDR_BIN="bin/rk35/rk3576_ddr_lp4_2112MHz_lp5_2736MHz_v1.13.bin"
 BL31_ELF="bin/rk35/rk3576_bl31_v1.24.elf"
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"

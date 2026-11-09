@@ -17,7 +17,8 @@ header pins 8/10/6 (see `rootfs_overlay/etc/erlinit.config`).
 
 In the diagram: 8 is the 40-pin header with the debug UART on pins 8
 (TX), 10 (RX), 6 (GND); 11 is the MASKROM button, used together with the
-upper USB 3.0 OTG port (14) for `rkdeveloptool`; 26 is the microSD slot
+upper USB 3.0 Type-A port (14) for `rkdeveloptool` (with an A-to-A cable;
+remove any UFS module first, the maskrom loader erases it); 26 is the microSD slot
 that holds the Nerves firmware; 1 is the USB-C port, which is power only.
 
 ## Boot architecture
@@ -53,7 +54,7 @@ doesn't need to be touched again.
 | Audio | Yes | ES8388 headphone jack + HDMI audio via ALSA (aplay/amixer included) |
 | Watchdog | Yes | dw-wdt armed by Erlang heart (`nerves_heart`), NOWAYOUT |
 | RTC | Yes | HYM8563; sets the clock at boot. Battery backup via the 2-pin socket on the board underside (CR2032 with a 1.25 mm-pitch plug lead, not a bare coin cell) |
-| USB hosts / gadget | Yes | 2x USB3 + 2x USB2; the OTG port does `usb0` gadget ethernet |
+| USB hosts | Yes | 2x USB3 + 2x USB2, all host-only: both dwc3 controllers are `dr_mode = "host"` in this device tree, so there is no `usb0` gadget ethernet |
 | GPIO/I2C/SPI/PWM/UART/CAN header | Yes | Via [Circuits.*](https://elixir-circuits.github.io/); see the 40-pin summary below |
 | SPI NOR access | Yes | `loader` mtd + `flashcp` are included; copy `u-boot-rockchip-spi.bin` over to reflash the bootloader from Linux (maskrom is the documented path) |
 | PCIe / NVMe (FPC) | Untested | Enabled in the device tree; needs the M.2 HAT to verify |
@@ -189,7 +190,7 @@ the vendor code this system carries.
 | GPU | Mali G52 MC3 | Vendor kmod (`/dev/mali0`) + libmali GBM blob |
 | NPU | 6 TOPS INT8 RKNPU | Kernel driver 0.9.8 + librknnrt 2.3.2 |
 | Audio | ES8388 codec (3.5 mm 4-pole headphone + mic, drives 32 Ω) + HDMI audio | ALSA; es8323 driver via fallback compatible |
-| USB | 1× USB3 OTG/host (upper; maskrom port), 1× USB3 host, 2× USB2 hosts | OTG port doubles as gadget/`usb0` |
+| USB | 2× USB3 host (upper is also the maskrom port), 2× USB2 hosts | No gadget/`usb0`: the device tree sets both dwc3 controllers to host mode |
 | PCIe | Gen2 x1 over 16-pin FPC (RPi 5-style) | M.2 NVMe via Radxa HAT; dts-enabled, untested |
 | RTC | Haoyu HYM8563 (i2c 0x51), 2-pin XH battery connector (CR2032) | Sets system clock at boot |
 | Fan | 2-pin XH 1.25 mm, 5 V PWM | pwm-fan in dts, thermal-zone driven |

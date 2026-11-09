@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.2
+
+- DDR init blob v1.12 → v1.13 (rkbin 14ece058) in the prebuilt
+  `uboot/u-boot-rockchip-spi.bin`. v1.13 adds "adaptation to 2 cs ddr if cs
+  at high position and row_3_4 is enabled", the geometry of the 6 GB LPDDR5
+  parts: on v1.12 a 6 GB ROCK 4D runs U-Boot but its kernel never starts
+  unless limited to the low 2.75 GB (`mem=2816M`); on v1.13 it boots with
+  all 6 GB and passes memtester over 4 GB. Firmware updates never touch the
+  SPI NOR, so boards need the image reflashed (maskrom, or `flashcp` from
+  Linux).
+- HDMI: set `rockchip,sda-falling-delay-ns = <360>` on `&hdmi`
+  (`linux/0002`, the value Rockchip's RK3576 EVB uses). Without it the
+  RK3576 glue never enables the DDC SDA delay, and EDID reads from some
+  displays corrupt, leaving only fallback modes up to 1080p.
+- Docs: the maskrom port is the upper USB 3.0 Type-A port (A-to-A cable);
+  remove any UFS module before maskrom, as the loader erases it; USB is
+  host-only (no `usb0` gadget ethernet).
+
 ## v0.1.1
 
 Firmware validation fixes found during hardware testing:
