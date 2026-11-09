@@ -37,8 +37,9 @@ expect. This system builds mainline U-Boot (v2027.01-rc1) in Buildroot
 with UFS/SCSI support, and ships a flashing path that writes a 4096-byte
 GPT (see "Flashing and upgrades"). Flash U-Boot to the NOR once over USB
 maskrom (a host-side `rkdeveloptool` step, see
-[uboot/README.md](uboot/README.md)), **with the UFS module removed**: the
-maskrom loader erases a seated module. After that, firmware updates are
+[uboot/README.md](uboot/README.md); each release attaches the SPI image,
+the maskrom loader and their `SHA256SUMS`), **with the UFS module
+removed**: the maskrom loader erases a seated module. After that, firmware updates are
 normal Nerves A/B upgrades on the module and the bootloader doesn't need
 to be touched again. About 14.4 MiB of the NOR stays free.
 
