@@ -8,6 +8,14 @@
   validates, alongside `complete` and `revert`. Before, an upgrade pointed it
   at the new slot, so after U-Boot rolled back an unvalidated slot, a torn or
   corrupt env would fall back into the rejected firmware.
+- An upgrade first repoints the fallback at the running (validated) slot,
+  then trims and writes the target, which repairs a fallback left stale by
+  a v0.2.1 rollback. The extlinux resources now come first in the archive
+  for that.
+- `upgrade.*` and `validate.*` require `/` to be the slot the env names.
+  After an extlinux fallback the two can disagree, and validating would
+  then bless the slot that failed to boot, or an upgrade would clear the
+  running rootfs.
 
 ## v0.2.1
 
