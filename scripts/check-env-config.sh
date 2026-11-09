@@ -81,7 +81,9 @@ fw_env_size=$(to_dec "$3")
 [ -n "$uboot_size" ] || fail "no numeric CONFIG_ENV_SIZE in $FRAGMENT"
 is_uint "$env_count" || fail "no numeric define!(UBOOT_ENV_COUNT, ...) in $FWUP_COMMON"
 is_uint "$image_size" || fail "no numeric BR2_PACKAGE_HOST_UBOOT_TOOLS_ENVIMAGE_SIZE in $DEFCONFIG"
-[ -n "$fw_env_offset" ] && [ -n "$fw_env_size" ] || fail "no device/offset/size line in $FW_ENV"
+if [ -z "$fw_env_offset" ] || [ -z "$fw_env_size" ]; then
+    fail "no device/offset/size line in $FW_ENV"
+fi
 
 fwup_size=$((env_count * 512))
 if [ "$uboot_size" -ne "$fwup_size" ] || [ "$uboot_size" -ne "$image_size" ] || [ "$uboot_size" -ne "$fw_env_size" ]; then

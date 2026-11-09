@@ -1,11 +1,18 @@
 # Changelog
 
-## v0.2.0-dev
+## v0.2.0
 
-In progress. This fork moves boot from the SD card to a Radxa UFS module
-(the ROCK 4D BootROM boots SPI NOR, then UFS, then USB, never SD); SD boot
-is replaced rather than kept alongside. The change is in this branch,
-build-proven only, pending hardware bring-up.
+This fork moves boot from the SD card to a Radxa UFS module (the ROCK 4D
+BootROM boots SPI NOR, then UFS, then USB, never SD); SD boot is replaced
+rather than kept alongside.
+
+Verified on hardware 2026-11-08 with a 128 GB YMTC UFS module and an XMC
+XM25QU128C SPI NOR: U-Boot loads its env from SCSI and boots the slot,
+A/B upgrade and validation, revert on reboot and on a power cycle, three
+cold boots, Ethernet, WiFi station mode (WPA2), `hci0`, RTC, watchdog,
+NPU inference (rknn-toolkit2 v2.3.2 examples), GPU rendering (`kmscube` on
+HDMI at 4K), and thermals under load. Still untested: booting with no
+module fitted.
 
 UFS boot:
 
@@ -41,8 +48,15 @@ UFS boot:
 - Removed the committed v0.1.x `uboot/u-boot-rockchip-spi.bin` (env on SD,
   unable to find the UFS env, and named like the Buildroot-built image) and
   its `scripts/build-uboot.sh`; both remain at tag v0.1.1.
-- Not yet verified on hardware: UFS probe at env-load time, the
-  GUID-based disk lookup, and NOR chip variants.
+- HDMI EDID now reads: `linux/0002` sets the DDC SDA falling delay
+  (`rockchip,sda-falling-delay-ns = <360>`). Without it EDID reads
+  corrupted and only fallback modes up to 1080p were offered.
+- The README no longer claims USB gadget ethernet: both dwc3 controllers
+  are host-only in this device tree. The maskrom port is the upper USB 3.0
+  Type-A port.
+- CI: `.github/workflows/ci.yml` lints `nerves_defconfig`, shellchecks the
+  scripts and runs the image-tool tests on every push and PR. A `v*` tag
+  builds the system and attaches the artifact to the release.
 
 Pin bumps:
 
