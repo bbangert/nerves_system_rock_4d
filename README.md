@@ -219,7 +219,7 @@ the vendor code this system carries.
 | Peripheral | Device | Notes |
 | --- | --- | --- |
 | SoC | Rockchip RK3576 (RK3576J on industrial SKUs), 4×Cortex-A72 @ 2.2 GHz + 4×Cortex-A53 @ 2.0 GHz | RK806 PMIC (i2c 0x23) |
-| RAM | LPDDR5, 2/4/8/16 GB SKUs | DDR init blob handles LP4/LP5 |
+| RAM | LPDDR5, 2/4/6/8/16 GB SKUs | DDR init blob v1.13 handles LP4/LP5 and the 6 GB (3/4-row) parts |
 | Boot flash | 16 MB SPI NOR on sfc0 (XMC XM25QU128C on the tested board) | mtd `loader`; holds U-Boot |
 | microSD | sdmmc, UHS-I SDR104 | Unused by this fork |
 | eMMC/UFS connector | UFS modules 64 GB–1 TB | The Nerves system disk (4096-byte sectors); eMMC modules unsupported on SPI-NOR (standard) SKUs |

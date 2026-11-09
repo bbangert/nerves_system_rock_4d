@@ -18,6 +18,11 @@
   running rootfs.
 - `prevent-revert.*` runs only from a validated running slot, and points the
   fallback at it before deleting the other slot's kernel, DTB and rootfs.
+- DDR init blob v1.12 → v1.13 (rkbin 14ece058). v1.13 adds "adaptation to
+  2 cs ddr if cs at high position and row_3_4 is enabled", the geometry of
+  the 6 GB parts. A 6 GB ROCK 4D ran U-Boot on v1.12 but its kernel never
+  started unless limited to the low 2.75 GB (`mem=2816M`). Boards need the
+  new `u-boot-rockchip-spi.bin` flashed to SPI NOR for this to apply.
 
 ## v0.2.1
 
