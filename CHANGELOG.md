@@ -18,6 +18,19 @@
   running rootfs.
 - `prevent-revert.*` runs only from a validated running slot, and points the
   fallback at it before deleting the other slot's kernel, DTB and rootfs.
+- Fix the 6 GB LPDDR5 SKUs (row_3_4, second chip-select high): DDR init blob
+  v1.12 → v1.13 (rkbin 14ece058), which adds "adaptation to 2 cs ddr if cs
+  at high position and row_3_4 is enabled". On v1.12 a 6 GB ROCK 4D ran
+  U-Boot but its kernel never started unless limited to the low 2.75 GB
+  (`mem=2816M`). On v1.13 it boots with all 6 GB (System RAM
+  0x4020_0000–0x1_BFFF_FFFF) and passes memtester over 4 GB with no reset.
+  Firmware upgrades never touch SPI NOR, so existing boards need
+  `u-boot-rockchip-spi.bin` reflashed: from Linux with `flashcp` to the
+  `loader` mtd, or over maskrom with the UFS module removed (see
+  `uboot/README.md`). A 6 GB board still on v1.12 reaches Linux only with
+  `mem=2816M` in the U-Boot env `cmdline`.
+- Docs: remove the UFS module before a maskrom NOR flash. The loader
+  re-provisions and erases a seated module.
 
 ## v0.2.1
 
