@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.2.2
+
+- U-Boot's fallback boot path (`extlinux/extlinux.conf`) now always names
+  the last validated slot. Upgrades no longer rewrite it; the ops.fw
+  `validate` task (now `validate.a`/`validate.b`) writes it for the slot it
+  validates, alongside `complete` and `revert`. Before, an upgrade pointed it
+  at the new slot, so after U-Boot rolled back an unvalidated slot, a torn or
+  corrupt env would fall back into the rejected firmware.
+- An upgrade first repoints the fallback at the running (validated) slot,
+  then trims and writes the target, which repairs a fallback left stale by
+  a v0.2.1 rollback. The extlinux resources now come first in the archive
+  for that.
+- `upgrade.*` and `validate.*` require `/` to be the slot the env names.
+  After an extlinux fallback the two can disagree, and validating would
+  then bless the slot that failed to boot, or an upgrade would clear the
+  running rootfs.
+- `prevent-revert.*` runs only from a validated running slot, and points the
+  fallback at it before deleting the other slot's kernel, DTB and rootfs.
+
 ## v0.2.1
 
 Makes the system vendorable as `<product>/base/` (nerves_system_vagus).
