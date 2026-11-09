@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.3
+
+- Tagged releases attach `u-boot-rockchip-spi.bin`,
+  `rk3576_spl_loader_v1.09.108.bin` and their `SHA256SUMS` next to the
+  system artifact, for maskrom flashing.
+- The rootfs carries its release's SPI image (`/usr/share/rock4d/`, with a
+  sha256) and `rock4d-bootloader`: `status` compares the NOR against it
+  (sha256 and DDR `fwver`), `update --yes` writes it with `flashcp` and
+  verifies by read-back. Opt-in only; nothing runs it. busybox gains
+  `cmp`, `stat` (with `-c` formats) and `strings` for it. `status` and the
+  refusal without `--yes` are verified on hardware; the `update --yes` write
+  path has not been run on hardware.
+
 ## v0.2.2
 
 - U-Boot's fallback boot path (`extlinux/extlinux.conf`) now always names
