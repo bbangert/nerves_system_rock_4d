@@ -16,6 +16,8 @@
   After an extlinux fallback the two can disagree, and validating would
   then bless the slot that failed to boot, or an upgrade would clear the
   running rootfs.
+- `prevent-revert.*` runs only from a validated running slot, and points the
+  fallback at it before deleting the other slot's kernel, DTB and rootfs.
 
 ## v0.2.1
 
