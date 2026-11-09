@@ -100,7 +100,7 @@ attaches `u-boot-rockchip-spi.bin`, `rk3576_spl_loader_v1.09.108.bin` and a
 directory. Check the hashes, then:
 
 ```sh
-rkdeveloptool db uboot/rk3576_spl_loader_v1.09.108.bin  # bootstrap the loader
+rkdeveloptool db rk3576_spl_loader_v1.09.108.bin        # bootstrap the loader (uboot/ in a checkout)
 rkdeveloptool cs 9                                      # select the SPI NOR
 rkdeveloptool wl 0 u-boot-rockchip-spi.bin              # write at offset 0
 rkdeveloptool rd                                        # reboot
