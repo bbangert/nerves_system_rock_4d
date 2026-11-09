@@ -23,6 +23,8 @@
   the 6 GB parts. A 6 GB ROCK 4D ran U-Boot on v1.12 but its kernel never
   started unless limited to the low 2.75 GB (`mem=2816M`). Boards need the
   new `u-boot-rockchip-spi.bin` flashed to SPI NOR for this to apply.
+- Docs: remove the UFS module before a maskrom NOR flash. The loader
+  re-provisions and erases a seated module.
 
 ## v0.2.1
 
