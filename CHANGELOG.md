@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.1
+
+Makes the system vendorable as `<product>/base/` (nerves_system_vagus).
+No change to the board support.
+
+- `external.mk`, `post-build.sh` and `post-createfs.sh` locate this
+  system's files relative to themselves. Vendored, `NERVES_DEFCONFIG_DIR`
+  names the product dir. `fwup-ops.conf` is compiled with
+  `NERVES_DEFCONFIG_DIR` pointing at this system, for the extlinux files.
+- `erlinit.config` no longer mounts the cgroup v1 tmpfs and `cpu`
+  hierarchy. Nothing here used them, and a mounted v1 hierarchy keeps its
+  controllers out of the cgroup2 hierarchy a container engine needs.
+
 ## v0.2.0
 
 This fork moves boot from the SD card to a Radxa UFS module (the ROCK 4D
