@@ -155,8 +155,10 @@ capped. To move it to v1.13 without maskrom:
    fw_setenv -c reader-fw_env.config cmdline mem=2816M
    ```
 
-2. Put the module back, boot the board, and run
-   `rock4d-bootloader update --yes`.
+2. Put the module back and boot the board. It must be running firmware
+   built on nerves_system_rock_4d v0.2.3 or later, which carries
+   `rock4d-bootloader` and the v1.13 image; if it is older, upgrade it
+   first (`fwup` over SSH). Then run `rock4d-bootloader update --yes`.
 3. On the board, `fw_setenv cmdline ""` and reboot into the full 6 GB.
 
 Serial console for watching the boot: UART0 on the 40-pin header, pin 8

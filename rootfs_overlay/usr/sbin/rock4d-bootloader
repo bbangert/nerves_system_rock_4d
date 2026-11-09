@@ -38,6 +38,23 @@ mkdir -m 700 "$tmp" || die "can't create $tmp"
 trap 'rm -rf "$tmp"' EXIT
 nor=$tmp/nor.bin
 
+# Two concurrent updates would interleave erases and writes on the only
+# bootloader copy. mkdir is the atomic test-and-set (no flock here). A lock
+# left by a crashed update is only reported: clearing it automatically
+# races another run doing the same. /run is emptied at every boot.
+lock=/run/rock4d-bootloader.lock
+take_lock() {
+    if ! mkdir "$lock" 2>/dev/null; then
+        owner=$(cat "$lock/pid" 2>/dev/null)
+        if [ -n "$owner" ] && kill -0 "$owner" 2>/dev/null; then
+            die "another update (pid $owner) is running"
+        fi
+        die "stale lock $lock (pid ${owner:-unknown} is gone); if no update is running, rm -rf $lock and retry"
+    fi
+    echo $$ >"$lock/pid"
+    trap 'rm -rf "$tmp" "$lock"' EXIT
+}
+
 case "$1" in
 status)
     read_nor "$nor"
@@ -52,6 +69,7 @@ status)
     ;;
 update)
     [ "$2" = "--yes" ] || die "refusing without --yes: an interrupted write needs a maskrom recovery"
+    take_lock
     flashcp -v "$IMG" "/dev/$mtd" || die "flashcp failed; the NOR may need a maskrom recovery"
     read_nor "$nor"
     cmp -s "$IMG" "$nor" || die "read-back differs from the shipped image; reflash before rebooting"
