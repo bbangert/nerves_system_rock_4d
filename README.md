@@ -163,7 +163,10 @@ environment and an extlinux boot without revert on that boot. If the
 nerves boot path or the environment is broken, `bootflow scan` boots
 `extlinux/extlinux.conf` from the FAT partition instead; that scan only
 finds it because bootfs is the only partition marked bootable (GPT
-legacy-BIOS-bootable attribute). U-Boot build
+legacy-BIOS-bootable attribute). `extlinux.conf` always names the last
+validated slot: `complete` and validation write it, as does a manual
+revert, and upgrades leave it alone. So a fallback boot never lands in an
+unvalidated or rolled-back slot. U-Boot build
 details and provenance: `uboot/README.md`.
 
 Linux never mounts the bootfs: it is a 512-byte-BPB FAT (all fwup can
