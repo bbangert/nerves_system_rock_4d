@@ -1,0 +1,63 @@
+From: Ben Bangert <ben@groovie.org>
+Subject: [PATCH] dts: rk3576-rock-4d: drive the Radxa 25W PoE+ HAT fan
+
+The HAT switches its fan from 40-pin header pin 33 (GPIO1_C2, pwm1_6ch_2
+via pwm1m1_ch2). The control is active-low: a high pin is off, which is
+also the pin's reset state. Radxa's rock-4d-radxa-25w-poe overlay models
+it as a pwm-fan on inverted polarity with the same five cooling levels
+as the board's own fan0; the PWM driver parks an inverted channel at its
+inactive (high) level when disabled, so cooling state 0 is fan off.
+
+The thermal map entries mirror fan0's: the same two trips of
+little-core-thermal as separate map entries, so each fan is an
+independent cooling device of the zone. Radxa's overlay also adds a
+w1-gpio node for the HAT's DS18B20 sensor; that is not ported.
+
+--- a/arch/arm64/boot/dts/rockchip/rk3576-rock-4d.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3576-rock-4d.dts
+@@ -31,6 +31,14 @@
+ 		pwms = <&pwm2_8ch_5 0 60000 0>;
+ 	};
+ 
++	/* Radxa 25W PoE+ HAT fan on header pin 33; its control is active-low. */
++	radxa_poe_fan: radxa-poe-fan {
++		compatible = "pwm-fan";
++		#cooling-cells = <2>;
++		cooling-levels = <0 64 128 192 255>;
++		pwms = <&pwm1_6ch_2 0 40000 PWM_POLARITY_INVERTED>;
++	};
++
+ 	vcc_sys: vcc5v0-sys {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vcc_sys";
+@@ -348,6 +356,18 @@
+ 				<&fan0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+ 			contribution = <8192>;
+ 		};
++		map5 {
++			trip = <&target>;
++			cooling-device =
++				<&radxa_poe_fan THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++			contribution = <8192>;
++		};
++		map6 {
++			trip = <&threshold>;
++			cooling-device =
++				<&radxa_poe_fan THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++			contribution = <8192>;
++		};
+ 	};
+ };
+ 
+@@ -597,6 +617,11 @@
+ 	status = "okay";
+ };
+ 
++&pwm1_6ch_2 {
++	pinctrl-0 = <&pwm1m1_ch2>;
++	status = "okay";
++};
++
+ &pinctrl {
+ 	usb {
+ 		usb_host_pwren: usb-host-pwren {
