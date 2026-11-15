@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Both fans are now driven from the SoC temperature: the board's own fan
+  header and the Radxa 25W PoE+ HAT fan (header pin 33, inverted PWM; off
+  at state 0). The kernel gains `SENSORS_PWM_FAN`, which was not built
+  before, so neither fan was ever controlled.
+- The default thermal governor changes from power_allocator to step_wise.
+  power_allocator never sets a state on a pwm-fan. CPU and GPU throttling
+  now follow step_wise at the 85 °C trip instead of the power budget.
+- Header pin 33 is claimed as the HAT fan PWM output on every board.
+- Not built into firmware or run on a board yet.
+
 ## v0.2.4
 
 - The application data partition (p5) is now ext4 mounted at `/data`,

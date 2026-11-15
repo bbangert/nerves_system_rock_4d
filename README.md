@@ -235,7 +235,8 @@ the vendor code this system carries.
 | USB | 2× USB3 host (upper is also the maskrom port), 2× USB2 hosts | No gadget/`usb0`: the device tree sets both dwc3 controllers to host mode |
 | PCIe | Gen2 x1 over 16-pin FPC (RPi 5-style) | M.2 NVMe via Radxa HAT; dts-enabled, untested |
 | RTC | Haoyu HYM8563 (i2c 0x51), 2-pin XH battery connector (CR2032) | Sets system clock at boot |
-| Fan | 2-pin XH 1.25 mm, 5 V PWM | pwm-fan in dts, thermal-zone driven |
+| Fan | 2-pin XH 1.25 mm, 5 V PWM | pwm-fan driven by the SoC temperature (little-core thermal zone, step_wise governor): off below 60 °C, then 25/50/75/100 % duty, one level per step while the temperature keeps rising, and back down as it falls. Not yet verified on hardware |
+| PoE+ HAT fan | Header pin 33 (GPIO1_C2, PWM `pwm1_6ch_2`), active-low | Same levels and trips as the board fan. The pin is claimed for this on every board, with or without the HAT, so it is not available as a GPIO or another PWM. Not yet verified on hardware |
 | Debug UART | UART0, header pins 8 (TX) / 10 (RX) / 6 (GND) | 1500000 8N1; `ttyFIQ0` console |
 | LEDs | power (default-on), user (heartbeat) | gpio-leds, `/sys/class/leds` |
 | Power | 5 V only: USB-C (PD adapters OK, board takes 5 V fixed), header pins 2/4, or PoE+ HAT | ≥3 A recommended |
@@ -250,6 +251,12 @@ the vendor code this system carries.
 PDM mic inputs, CAN1, and I3C0. Power: 3V3 on pins 1/17, 5V on 2/4,
 grounds on 6/9/14/20/25/30/34/39. Use them from Elixir with
 [Circuits.GPIO/I2C/SPI/UART](https://elixir-circuits.github.io/).
+Pin 33 is the exception: the device tree gives it to the PoE+ HAT fan.
+
+The HAT fan control is inverted (high is off). When the board is powered off but PoE power remains, the pin
+is unpowered and the fan runs at full speed. That is the HAT's hardware
+behavior, not something the firmware can change. The DS18B20 temperature
+sensor on the HAT (GPIO1_C3) is not set up.
 
 ---
 
