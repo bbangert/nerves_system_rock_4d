@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.5
 
 - Both fans are now driven from the SoC temperature: the board's own fan
   header and the Radxa 25W PoE+ HAT fan (header pin 33, inverted PWM; off
@@ -13,7 +13,20 @@
   power_allocator never sets a state on a pwm-fan. CPU and GPU throttling
   now follow step_wise at the 85 °C trip instead of the power budget.
 - Header pin 33 is claimed as the HAT fan PWM output on every board.
-- Not built into firmware or run on a board yet.
+- Verified on a ROCK 4D (4 GB) with the 25W PoE+ HAT: both fan devices
+  bind, every thermal zone uses step_wise, and the HAT fan is off at idle
+  and runs under load, so the inverted polarity is right for this HAT.
+  Under 150 s of full load on all 8 cores the fan reached 25 % at 61 °C,
+  50 % at 74 °C and 75 % at about 77 °C, where the temperature levelled
+  off; the 84 °C trip and CPU throttling were not reached. After the load
+  it dropped to 50 % at 66 °C and off at 55 °C. Not verified: a fan on the
+  board's own fan header (only its driver state was read), sustained light
+  load near 60 °C (possible on/off cycling), behaviour above 84 °C, the
+  6 GB board, and other HAT revisions.
+- The aic8800 driver's "rx eapol" print now goes through the driver's debug
+  level instead of the console, so it no longer appears in the kernel log
+  or on the HDMI console during WPA association (a fork-local patch,
+  `0031`). Verified on hardware.
 
 ## v0.2.4
 
