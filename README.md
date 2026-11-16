@@ -235,7 +235,7 @@ the vendor code this system carries.
 | USB | 2× USB3 host (upper is also the maskrom port), 2× USB2 hosts | No gadget/`usb0`: the device tree sets both dwc3 controllers to host mode |
 | PCIe | Gen2 x1 over 16-pin FPC (RPi 5-style) | M.2 NVMe via Radxa HAT; dts-enabled, untested |
 | RTC | Haoyu HYM8563 (i2c 0x51), 2-pin XH battery connector (CR2032) | Sets system clock at boot |
-| Fan | 2-pin XH 1.25 mm, 5 V PWM | pwm-fan driven by the SoC temperature (little-core thermal zone, step_wise governor): off below 60 °C, then 25/50/75/100 % duty, one level per step while the temperature keeps rising, and back down as it falls. Not yet verified on hardware |
+| Fan | 2-pin XH 1.25 mm, 5 V PWM | pwm-fan driven by the SoC temperature (little-core thermal zone, step_wise governor). One level per trip: off below 60 °C, 25 % from 60 °C, 50 % from 68 °C, 75 % from 76 °C, 100 % from 84 °C. Rising, the level jumps straight to the band's level. Falling, it drops one level per falling sample and only once the temperature is below that level's trip; there is no hysteresis, so the fan can switch on and off around 60 °C. Not yet verified on hardware |
 | PoE+ HAT fan | Header pin 33 (GPIO1_C2, PWM `pwm1_6ch_2`), active-low | Same levels and trips as the board fan. The pin is claimed for this on every board, with or without the HAT, so it is not available as a GPIO or another PWM. Not yet verified on hardware |
 | Debug UART | UART0, header pins 8 (TX) / 10 (RX) / 6 (GND) | 1500000 8N1; `ttyFIQ0` console |
 | LEDs | power (default-on), user (heartbeat) | gpio-leds, `/sys/class/leds` |

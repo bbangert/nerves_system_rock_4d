@@ -5,7 +5,10 @@
 - Both fans are now driven from the SoC temperature: the board's own fan
   header and the Radxa 25W PoE+ HAT fan (header pin 33, inverted PWM; off
   at state 0). The kernel gains `SENSORS_PWM_FAN`, which was not built
-  before, so neither fan was ever controlled.
+  before, so neither fan was ever controlled. Four active trips (60, 68,
+  76, 84 °C) give 25, 50, 75 and 100 % duty. step_wise ignores trip
+  hysteresis, so a level is released as soon as the temperature falls
+  below its trip, one level per falling sample.
 - The default thermal governor changes from power_allocator to step_wise.
   power_allocator never sets a state on a pwm-fan. CPU and GPU throttling
   now follow step_wise at the 85 °C trip instead of the power budget.
